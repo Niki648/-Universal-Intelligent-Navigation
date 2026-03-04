@@ -6,9 +6,7 @@
         "-y",
         "@amap/amap-maps-mcp-server"
       ],
-      "env": {
-        "AMAP_MAPS_API_KEY": "efd44ef16538e825c9f8b99ac26872fc"
-      }
+      "env": {}
     },
     "sy-image-search-mcp-server": {
       "command": "java",

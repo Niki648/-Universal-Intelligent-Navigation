@@ -12,7 +12,9 @@
 | `DB_USERNAME` | 数据库用户名 |
 | `DB_PASSWORD` | 数据库密码 |
 | `DASHSCOPE_API_KEY` | 阿里云百炼 / DashScope API Key |
-| `SEARCH_API_KEY` | 搜索 API Key |
+| `SEARCH_API_KEY` | 搜索 API Key（主应用） |
+| `PEXELS_API_KEY` | Pexels 图片搜索 API Key（sy-image-search-mcp 子模块） |
+| `AMAP_MAPS_API_KEY` | 高德地图 MCP 服务 API Key（启用 amap-maps 时需在启动前设置，子进程会继承） |
 
 示例（Windows PowerShell）：
 
@@ -26,14 +28,13 @@ $env:SEARCH_API_KEY = "your-search-api-key"
 
 ## 方式二：本地配置文件（适合本地开发）
 
-1. 复制示例配置：
-   ```bash
-   cp src/main/resources/application-local.yml.example src/main/resources/application-local.yml
-   ```
-2. 编辑 `application-local.yml`，填入真实的数据库地址、API Key 等。
-3. **不要**将 `application-local.yml` 提交到 Git（已加入 `.gitignore`）。
+1. **主应用**：复制 `src/main/resources/application-local.yml.example` 为 `application-local.yml`，填入数据库、DashScope、search-api 等。
+2. **sy-image-search-mcp 子模块**：复制 `sy-image-search-mcp/src/main/resources/application-local.yml.example` 为 `application-local.yml`，填入 `pexels.api-key`。
+3. **不要**将任何 `application-local.yml` 提交到 Git（已通过 `.gitignore` 忽略）。
 
-项目已设置 `spring.profiles.active: local`，会自动加载 `application-local.yml` 覆盖默认占位符。
+主应用与 sy-image-search-mcp 均已配置加载 `local` profile，会自动加载对应 `application-local.yml`。
+
+**MCP 高德地图**：`mcp-servers.json` 中已移除密钥。启用 amap-maps 时，请在启动主应用前设置环境变量 `AMAP_MAPS_API_KEY`，子进程会继承该环境变量。
 
 ## 已脱敏内容
 

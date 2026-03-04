@@ -6,6 +6,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -16,10 +17,9 @@ import java.util.stream.Collectors;
 @Service
 public class ImageSearchTool {
 
-    // 替换为你的 Pexels API 密钥（需从官网申请）
-    private static final String API_KEY = "4LwetqH9agFpvWfJrjvkY3K2wsHODHq2vBMUwN1QHdrFyinYmoxtjfpL";
+    @Value("${pexels.api-key:}")
+    private String apiKey;
 
-    // Pexels 常规搜索接口（请以文档为准）
     private static final String API_URL = "https://api.pexels.com/v1/search";
 
     @Tool(description = "search image from web")
@@ -38,9 +38,11 @@ public class ImageSearchTool {
      * @return
      */
     public List<String> searchMediumImages(String query) {
-        // 设置请求头（包含API密钥）
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException("Pexels API key not configured. Set pexels.api-key or PEXELS_API_KEY.");
+        }
         Map<String, String> headers = new HashMap<>();
-        headers.put("Authorization", API_KEY);
+        headers.put("Authorization", apiKey);
 
         // 设置请求参数（仅包含query，可根据文档补充page、per_page等参数）
         Map<String, Object> params = new HashMap<>();
