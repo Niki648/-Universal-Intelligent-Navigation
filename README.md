@@ -148,7 +148,7 @@ npm run dev
 
 ## 运行效果与截图
 
-截图放在 `docs/screenshots/`，命名规范见 [docs/screenshots/README.md](docs/screenshots/README.md)。
+截图和生成文件放在 `docs/screenshots/`，命名规范见 [docs/screenshots/README.md](docs/screenshots/README.md)。
 
 ---
 
