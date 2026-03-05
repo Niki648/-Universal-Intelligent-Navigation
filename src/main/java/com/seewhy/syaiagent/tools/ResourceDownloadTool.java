@@ -27,7 +27,7 @@ public class ResourceDownloadTool {
                     .setReadTimeout(20000)
                     .execute()
                     .writeBody(new File(filePath));
-            return "Resource downloaded successfully to: " + filePath;
+            return "Resource downloaded successfully to: " + filePath + " (tell user this path only, do not invent another path)";
         } catch (Exception e) {
             return "Error downloading resource: " + e.getMessage();
         }

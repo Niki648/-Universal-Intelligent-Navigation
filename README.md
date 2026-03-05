@@ -1,62 +1,62 @@
 # 寰宇智导 · AI 旅行规划与智能体系统
 
-基于 **Spring AI** 与 **阿里云百炼/通义** 大模型的智能旅行规划系统，提供多轮对话规划、RAG 知识库问答、结构化报告生成，以及具备自主规划能力的 **SyManus 超级智能体**（搜索、网页抓取、PDF 生成、文件读写等工具调用）。支持 **MCP（Model Context Protocol）** 扩展：可接入自研图片搜索 MCP 服务与高德地图 MCP 等，按需启用。
+> **说明**：本项目仅作个人学习与求职展示使用。
+
+基于 **Spring AI** 与 **阿里云百炼/通义** 大模型的智能旅行规划系统，提供多轮对话规划、RAG 知识库问答、结构化报告生成，以及具备自主规划能力的 **SyManus 超级智能体**（搜索、图片搜索、网页抓取、PDF 生成、文件读写等工具调用）。支持 **MCP（Model Context Protocol）** 扩展，可选接入自研 **sy-image-search-mcp** 图片搜索服务（Pexels API）。
 
 ---
 
-## 一、项目简介与亮点
+## 项目简介
 
-本项目将大模型对话、RAG 检索增强、ReAct 式工具调用整合在同一套后端中，适合作为 **Spring Boot + Spring AI + 大模型应用** 的求职/毕设项目展示：
+基于 **Spring Boot 3 + Spring AI** 的智能旅行规划与 AI 智能体系统：集成大模型多轮对话、**RAG 检索增强**、**ReAct 式工具调用**（搜索/抓取/PDF/文件等），支持 SSE 流式输出与结构化报告生成，前端为 Vue 3 + Vite。
 
-- **寰宇智导（TravelMaster）**：专业旅行规划对话，分阶段引导收集需求，支持多轮记忆、流式输出、结构化旅行报告与知识库问答。
-- **SyManus 智能体**：基于 ReAct（Reasoning and Acting）的通用助手，可自主选择并组合多种工具完成复杂任务（如搜索 → 抓取 → 生成 PDF）。
-- **技术栈覆盖**：Spring Boot 3、Spring AI、大模型 API 集成、向量检索（RAG）、SSE 流式响应、Vue 3 前端、PDF 生成（iText、中文字体支持）、**MCP 客户端与自研 MCP 服务**等。
+### 核心亮点
+
+| 模块 | 说明 |
+|------|------|
+| **寰宇智导（TravelMaster）** | 专业旅行规划对话，分阶段引导收集需求，支持多轮记忆、流式输出、结构化旅行报告与知识库问答。 |
+| **SyManus 智能体** | 基于 ReAct（Reasoning and Acting）的通用助手，可自主选择并组合多种工具完成复杂任务（如搜索 → 抓取 → 生成 PDF）。 |
+| **技术栈** | Spring Boot 3、Spring AI、大模型 API、向量检索（RAG）、MCP 扩展（sy-image-search-mcp）、SSE 流式、Vue 3 前端、iText PDF（含中文字体）等。 |
 
 ---
 
-## 二、技术栈
+## 技术栈
 
 | 类别 | 技术 |
 |------|------|
 | 后端框架 | Spring Boot 3.4、Java 21 |
 | AI / 大模型 | Spring AI、阿里云百炼 DashScope（通义千问） |
-| 对话与记忆 | Spring AI ChatClient、MessageWindowChatMemory |
+| 对话与记忆 | Spring AI ChatClient、MessageWindowChatMemory、Kryo 持久化 |
 | RAG | Spring AI VectorStore、Markdown 文档加载、关键词增强 |
 | 智能体 | 自研 ReAct 循环、ToolCallAgent、SyManus |
+| MCP 扩展 | Spring AI MCP Client、**sy-image-search-mcp**（Pexels 图片搜索，SSE/stdio 双模式） |
 | 文档与 PDF | iText 9（itext-core、font-asian 中文字体） |
 | 前端 | Vue 3、Vue Router、Vite、Axios |
-| MCP | Spring AI MCP Client、自研 sy-image-search-mcp（Pexels 图片搜索）、mcp-servers.json（stdio/SSE） |
 | 其他 | Knife4j/OpenAPI 3、Hutool、Jsoup |
 
 ---
 
-## 三、功能概览
+## 功能概览
 
-### 3.1 寰宇智导（旅行规划）
+### 寰宇智导（旅行规划）
 
 - **多轮对话规划**：分阶段询问目的地、时间、预算、偏好，再给出行程建议与预算分配。
 - **流式输出**：支持 SSE 流式接口，前端可逐字展示回复。
 - **结构化报告**：根据对话生成旅行规划报告（标题、建议、目的地、时长、预算、行程框架）。
-- **RAG 知识库问答**：基于本地 Markdown 旅行文档（如热门目的地、预算建议）做检索增强回答。
+- **RAG 知识库问答**：基于本地 Markdown 旅行文档做检索增强回答。
 
-### 3.2 SyManus 超级智能体
+### SyManus 超级智能体
 
 - **ReAct 式推理**：先思考再行动，按步骤选择工具并执行，最多 10 步内完成目标。
-- **可用工具**：WebSearchTool、WebScrapingTool、ResourceDownloadTool、FileOperationTool、PDFGenerationTool、TerminalOperationTool、TerminateTool。
+- **可用工具**：WebSearchTool、**ImageSearchTool**（可对接 **sy-image-search-mcp** 使用 Pexels 图片搜索）、WebScrapingTool、ResourceDownloadTool、FileOperationTool、PDFGenerationTool、TerminalOperationTool、TerminateTool。
 
-### 3.3 MCP 服务支持
+### sy-image-search-mcp（可选 MCP 服务）
 
-主应用通过 **Spring AI MCP Client** 可按需接入外部 MCP 服务，扩展能力而不改主代码：
+- **定位**：独立 MCP 服务子模块，为 SyManus 提供**图片搜索**能力（基于 Pexels API）。
+- **运行方式**：支持 **SSE**（独立进程，主应用 HTTP 连接）与 **stdio**（主应用按配置拉起子进程）两种模式。
+- **技术**：Spring Boot、Spring AI MCP Server、端口 8127（SSE 模式）。启用方式与 Pexels API Key 配置见 [docs/MCP-SETUP.md](docs/MCP-SETUP.md)。
 
-| MCP 服务 | 说明 | 配置方式 |
-|----------|------|----------|
-| **sy-image-search-mcp** | 自研图片搜索（Pexels API），供 AI 调用「搜索图片」能力 | SSE：先启动子服务（端口 8127）；或 stdio：由主应用按 `mcp-servers.json` 拉起 jar |
-| **amap-maps** | 高德地图 MCP（需 Node/npx），提供地图相关能力 | 在 `mcp-servers.json` 中配置，启动前设置环境变量 `AMAP_MAPS_API_KEY` |
-
-- 主应用默认 **未启用** MCP 客户端；启用方式见 [docs/MCP-SETUP.md](docs/MCP-SETUP.md)。
-- 配置文件：`src/main/resources/mcp-servers.json`（stdio 模式下的服务列表）。
-
-### 3.4 主要 API 一览
+### 主要 API
 
 | 接口 | 方法 | 说明 |
 |------|------|------|
@@ -68,89 +68,100 @@
 | `/api/travel/quick` | POST | 快速旅行咨询 |
 | `/api/travel/health` | GET | 健康检查 |
 
-API 文档：`http://localhost:8123/api/swagger-ui.html`
+- **API 文档（Swagger/Knife4j）**：启动后访问 `http://localhost:8123/api/doc.html` 或 `http://localhost:8123/api/swagger-ui.html`。
+- **（可选）启用 MCP 图片搜索**：需单独构建并启动 **sy-image-search-mcp**，并在主应用 `application.yml` 中启用 MCP 客户端。详见 [docs/MCP-SETUP.md](docs/MCP-SETUP.md)。
 
 ---
 
-## 四、项目结构（核心）
+## 项目结构
 
 ```
 sy-ai-agent/
 ├── src/main/java/com/seewhy/syaiagent/
-│   ├── controller/TravelController.java    # 旅行/智能体 HTTP 接口
-│   ├── app/TravelMaster.java               # 寰宇智导：对话、报告、RAG
-│   ├── agent/ (ReActAgent, ToolCallAgent, SyManus)
-│   ├── tools/ (WebSearch, WebScraping, PDF, File, Download, Terminal, Terminate)
-│   └── rag/ (DocumentLoader, VectorStore, QueryRewriter)
+│   ├── controller/          # 旅行/智能体 HTTP 接口
+│   ├── app/                  # 寰宇智导：TravelMaster（对话、报告、RAG）
+│   ├── agent/                # ReActAgent、ToolCallAgent、SyManus
+│   ├── tools/                # WebSearch、ImageSearch、WebScraping、PDF、File、Download、Terminal、Terminate
+│   ├── rag/                  # DocumentLoader、VectorStore、QueryRewriter
+│   ├── config/               # CORS、Manus 记忆等
+│   └── chatmemory/           # 文件持久化对话记忆
 ├── src/main/resources/
-│   ├── application.yml                     # 主配置（含可选 MCP 客户端配置）
-│   ├── mcp-servers.json                    # MCP stdio 模式服务列表
-│   ├── application-local.yml.example       # 本地配置示例
-│   ├── application-local.yml               # 本地真实配置（已 gitignore）
-│   └── document/ (travel_guide.md, budget_tips.md)
-├── sy-image-search-mcp/                   # 自研 MCP 服务：Pexels 图片搜索
-│   ├── src/.../tools/ImageSearchTool.java
-│   └── application.yml、application-local.yml.example
-├── frontend/ (Vue 3, TravelChat, ManusChat)
-├── docs/
-│   ├── MCP-SETUP.md                        # MCP 配置与检测说明
-│   └── screenshots/
+│   ├── application.yml       # 主配置（敏感项用环境变量占位，MCP 可选）
+│   ├── application-local.yml.example   # 本地配置示例
+│   └── document/             # RAG 用 Markdown（如 travel_guide.md）
+├── sy-image-search-mcp/     # 【可选】MCP 图片搜索服务（Pexels，SSE/stdio）
+├── frontend/                 # Vue 3 + Vite（TravelChat、ManusChat）
+├── docs/                     # 文档与截图说明（含 MCP-SETUP.md）
+├── SECURITY.md               # 敏感信息配置说明
 └── README.md
 ```
 
 ---
 
-## 五、快速开始
+## 快速开始
 
 ### 环境要求
 
-JDK 21、Maven 3.6+、Node.js 18+（前端）
+- **JDK 21**
+- **Maven 3.6+**
+- **Node.js 18+**（仅前端需要）
 
-### 配置敏感信息
+### 1. 配置敏感信息
 
-**方式一（推荐本地）**：复制 `application-local.yml.example` 为 `application-local.yml`，填入数据库、DASHSCOPE_API_KEY、SEARCH_API_KEY。
+**方式一（推荐本地开发）**  
+复制 `src/main/resources/application-local.yml.example` 为 `application-local.yml`，填入：
 
-**方式二**：设置环境变量 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD`、`DASHSCOPE_API_KEY`、`SEARCH_API_KEY`。详见 [SECURITY.md](SECURITY.md)。
+- 数据库：`spring.datasource.url / username / password`（若使用 RAG/向量库）
+- `spring.ai.dashscope.api-key`：阿里云百炼 API Key
+- `search-api.api-key`：搜索 API Key
+- （可选）启用 **sy-image-search-mcp** 时：`PEXELS_API_KEY` 或子模块内 `application-local.yml` 的 `pexels.api-key`，见 [SECURITY.md](SECURITY.md)。
 
-### 启动
+`application-local.yml` 已加入 `.gitignore`，不会提交到 Git。
+
+**方式二（环境变量）**  
+见 [SECURITY.md](SECURITY.md)，支持 `DASHSCOPE_API_KEY`、`SEARCH_API_KEY`、`DB_*` 等。
+
+### 2. 启动后端
 
 ```bash
-# 后端
 mvn spring-boot:run
-
-# 前端
-cd frontend && npm install && npm run dev
 ```
 
-默认后端端口 8123，上下文 `/api`。健康检查：`GET http://localhost:8123/api/travel/health`。
+默认端口 **8123**，上下文路径 **/api**。
 
-**可选：启用 MCP 服务**
+### 3. 启动前端
 
-- 若使用 **SSE 模式**（推荐）：先单独启动图片搜索 MCP，再在 `application.yml` 中取消注释 MCP SSE 连接配置。
-- 若使用 **stdio 模式**：先构建 `sy-image-search-mcp` 的 jar，再在 `application.yml` 中取消注释 MCP stdio 与 `mcp-servers.json` 配置。
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-详细步骤、环境变量（如 `PEXELS_API_KEY`、`AMAP_MAPS_API_KEY`）见 [docs/MCP-SETUP.md](docs/MCP-SETUP.md)。
+按终端提示访问（通常为 `http://localhost:5173`）。前端会请求 `http://localhost:8123/api`，需确保后端已启动且 CORS 已配置。
 
----
+### 4. 验证
 
-## 六、运行效果与截图
-
-将截图放入 `docs/screenshots/`，命名见 [docs/screenshots/README.md](docs/screenshots/README.md)。在 README 中取消对应图片行的注释即可展示。
-
-<!-- ![旅行规划对话](docs/screenshots/travel-chat.png) -->
-<!-- ![旅行报告](docs/screenshots/travel-report.png) -->
-<!-- ![RAG 问答](docs/screenshots/rag-qa.png) -->
-<!-- ![SyManus 工具调用](docs/screenshots/manus-tools.png) -->
-<!-- ![PDF 中文](docs/screenshots/pdf-chinese.png) -->
+- 健康检查：`GET http://localhost:8123/api/travel/health`
+- API 文档：`http://localhost:8123/api/doc.html` 或 `http://localhost:8123/api/swagger-ui.html`
 
 ---
 
-## 七、相关文档
+## 运行效果与截图
 
-- [SECURITY.md](SECURITY.md)：敏感信息配置说明。
-- [docs/MCP-SETUP.md](docs/MCP-SETUP.md)：MCP 服务配置、启动方式与检测说明。
-- `src/main/resources/fonts/README.txt`：PDF 中文字体配置。
+截图放在 `docs/screenshots/`，命名规范见 [docs/screenshots/README.md](docs/screenshots/README.md)。
 
 ---
 
-本项目仅供学习与求职展示使用。使用阿里云百炼/通义等 API 请遵守其服务条款。
+## 相关文档
+
+- [SECURITY.md](SECURITY.md)：敏感信息与安全配置说明。
+- [docs/MCP-SETUP.md](docs/MCP-SETUP.md)：**sy-image-search-mcp**（MCP 图片搜索服务）的构建、SSE/stdio 启动与主应用接入说明。
+- [docs/screenshots/README.md](docs/screenshots/README.md)：截图说明。
+- PDF 中文字体：若使用 iText 生成中文 PDF，需配置字体，见 `src/main/resources/fonts/`（如有）或 iText 文档。
+
+---
+
+## 开源协议与免责声明
+
+- 本项目采用 [MIT License](LICENSE) 开源。
+- 本项目仅供**学习与求职展示**使用。使用阿里云百炼/通义等第三方 API 时，请遵守其服务条款与使用规范。

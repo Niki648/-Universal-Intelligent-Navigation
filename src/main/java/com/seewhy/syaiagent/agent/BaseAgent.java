@@ -5,7 +5,10 @@ import com.seewhy.syaiagent.agent.model.AgentState;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -44,6 +47,13 @@ public abstract class BaseAgent {
     // Memory 记忆（需要自主维护会话上下文）
     private List<Message> messageList = new ArrayList<>();
 
+    /** 会话 ID，与 chatMemory 一起使用时用于多轮对话 */
+    private String conversationChatId;
+    /** 对话记忆，与 conversationChatId 一起使用时加载/保存多轮上下文 */
+    private ChatMemory conversationChatMemory;
+    private static final int MAX_HISTORY_LOAD = 20;
+    private static final int MAX_HISTORY_SAVE = 30;
+
     /**
      * 运行代理
      *
@@ -60,7 +70,17 @@ public abstract class BaseAgent {
         }
         // 2、执行，更改状态
         this.state = AgentState.RUNNING;
-        // 记录消息上下文
+        // 若有对话记忆则加载近期历史，再追加当前用户消息
+        if (conversationChatMemory != null && StrUtil.isNotBlank(conversationChatId)) {
+            List<Message> history = conversationChatMemory.get(conversationChatId);
+            if (history != null && !history.isEmpty()) {
+                if (history.size() > MAX_HISTORY_LOAD) {
+                    history = new ArrayList<>(history.subList(history.size() - MAX_HISTORY_LOAD, history.size()));
+                }
+                messageList = sanitizeMessagesForApi(new ArrayList<>(history));
+                log.debug("Loaded {} history messages for chatId {}", messageList.size(), conversationChatId);
+            }
+        }
         messageList.add(new UserMessage(userPrompt));
         // 保存结果列表
         List<String> results = new ArrayList<>();
@@ -129,7 +149,17 @@ public abstract class BaseAgent {
             }
             // 2、执行，更改状态
             this.state = AgentState.RUNNING;
-            // 记录消息上下文
+            // 若有对话记忆则加载近期历史，再追加当前用户消息
+            if (conversationChatMemory != null && StrUtil.isNotBlank(conversationChatId)) {
+                List<Message> history = conversationChatMemory.get(conversationChatId);
+                if (history != null && !history.isEmpty()) {
+                    if (history.size() > MAX_HISTORY_LOAD) {
+                        history = new ArrayList<>(history.subList(history.size() - MAX_HISTORY_LOAD, history.size()));
+                    }
+                    messageList = sanitizeMessagesForApi(new ArrayList<>(history));
+                    log.debug("Loaded {} history messages for chatId {}", messageList.size(), conversationChatId);
+                }
+            }
             messageList.add(new UserMessage(userPrompt));
             // 保存结果列表
             List<String> results = new ArrayList<>();
@@ -205,9 +235,49 @@ public abstract class BaseAgent {
     public abstract String step();
 
     /**
-     * 清理资源
+     * 规整消息列表，保证发往 API 时满足：每个 role=tool 的消息前必须有带 tool_calls 的 assistant 消息。
+     * 避免因历史截断导致出现“孤立的 tool 消息”而触发 DashScope 的 InvalidParameter 错误。
+     */
+    protected List<Message> sanitizeMessagesForApi(List<Message> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return messages;
+        }
+        List<Message> result = new ArrayList<>();
+        for (Message m : messages) {
+            if (m instanceof ToolResponseMessage) {
+                if (!result.isEmpty()) {
+                    Message last = result.get(result.size() - 1);
+                    if (last instanceof AssistantMessage) {
+                        List<AssistantMessage.ToolCall> toolCalls = ((AssistantMessage) last).getToolCalls();
+                        if (toolCalls != null && !toolCalls.isEmpty()) {
+                            result.add(m);
+                        }
+                    }
+                }
+            } else {
+                result.add(m);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 清理资源：若有对话记忆则把本轮消息写入记忆（按 chatId 持久化）
      */
     protected void cleanup() {
-        // 子类可以重写此方法来清理资源
+        if (conversationChatMemory != null && StrUtil.isNotBlank(conversationChatId) && !messageList.isEmpty()) {
+            try {
+                List<Message> toSave = getMessageList();
+                if (toSave.size() > MAX_HISTORY_SAVE) {
+                    toSave = new ArrayList<>(toSave.subList(toSave.size() - MAX_HISTORY_SAVE, toSave.size()));
+                }
+                toSave = sanitizeMessagesForApi(toSave);
+                conversationChatMemory.clear(conversationChatId);
+                conversationChatMemory.add(conversationChatId, toSave);
+                log.debug("Saved {} messages for chatId {}", toSave.size(), conversationChatId);
+            } catch (Exception e) {
+                log.warn("Failed to save conversation for chatId {}: {}", conversationChatId, e.getMessage());
+            }
+        }
     }
 }

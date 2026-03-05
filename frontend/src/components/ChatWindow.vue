@@ -14,9 +14,10 @@
       <input
         v-model="input"
         @keyup.enter="send"
-        placeholder="输入消息，回车发送"
+        :placeholder="inputPlaceholder"
       />
       <button @click="send">发送</button>
+      <p v-if="showInputHint" class="input-hint">{{ inputHintText }}</p>
     </div>
   </div>
 </template>
@@ -28,6 +29,8 @@ export default {
   props: {
     title: { type: String, default: "Chat" },
     ssePath: { type: String, required: true },
+    /** 输入框占位符（可选）；若 AI 刚回复「请补充/请提供」类内容，会临时覆盖为示例提示 */
+    placeholder: { type: String, default: "输入消息，回车发送" },
   },
   data() {
     return {
@@ -43,6 +46,30 @@ export default {
       repeatCount: 0,
       maxRepeatCount: 5,
     };
+  },
+  computed: {
+    /** 最后一条 AI 消息是否在向用户索要补充信息（创作者名、链接等） */
+    lastAiAsksForInput() {
+      const list = this.messages || [];
+      if (list.length === 0) return false;
+      const last = list[list.length - 1];
+      if (last?.role !== "ai" || !last?.content) return false;
+      const t = last.content;
+      return (
+        /请补充|请提供|请告诉我|请随时告诉我|补充.*信息|提供.*(名称|链接|创作者)/.test(t) ||
+        /（例如|例如：|如：）/.test(t)
+      );
+    },
+    inputPlaceholder() {
+      if (this.lastAiAsksForInput) return "例如：罗翔说刑法、或 B站主页链接";
+      return this.placeholder;
+    },
+    showInputHint() {
+      return this.lastAiAsksForInput;
+    },
+    inputHintText() {
+      return "可直接输入创作者名称或主页链接，回车发送";
+    },
   },
   beforeUnmount() {
     try {
@@ -310,11 +337,19 @@ export default {
   padding: 10px;
   border-top: 1px solid #eee;
   display: flex;
+  flex-wrap: wrap;
 }
 .chat-footer input {
   flex: 1;
+  min-width: 120px;
   padding: 8px;
   margin-right: 8px;
+}
+.input-hint {
+  width: 100%;
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #666;
 }
 .msg {
   display: flex;

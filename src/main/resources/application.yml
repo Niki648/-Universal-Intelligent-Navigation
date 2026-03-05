@@ -22,15 +22,16 @@ spring:
       chat:
         model: gemma3:1b
 
-#  #需要启动 MCP 服务
-#    mcp:
-#      client:
-#        sse:
-#          connections:
-#            server1:
-#              url: http://localhost:8127
-#        stdio:
-#          servers-configuration: classpath:mcp-servers.json
+    # MCP 客户端：启用后会在启动时连接/拉起 MCP 服务，若服务未就绪会导致启动超时失败。
+  # 需要时取消注释，并先确保：SSE 模式已启动 sy-image-search-mcp（端口 8127）；或 stdio 模式已构建 jar 且 amap 需 npx。
+#  mcp:
+#    client:
+#      sse:
+#        connections:
+#          server1:
+#            url: http://localhost:8127
+#      stdio:
+#        servers-configuration: classpath:mcp-servers.json
 
 server:
   port: 8123
@@ -47,7 +48,7 @@ springdoc:
   group-configs:
     - group: "default"
       paths-to-match: "/**"
-      packages-to-scan: com.sy.syaiagent.controller
+      packages-to-scan: com.seewhy.syaiagent.controller
 # knife4j
 knife4j:
   enable: true
@@ -57,6 +58,10 @@ knife4j:
 # searchAPI（敏感信息请使用环境变量或 application-local.yml）
 search-api:
   api-key: ${SEARCH_API_KEY:}
+
+# Pexels 图片搜索（SyManus 搜索/下载图片用）
+pexels:
+  api-key: ${PEXELS_API_KEY:}
 # 修改日志级别，查看 Spring AI 更多调用细节
 logging:
   level:

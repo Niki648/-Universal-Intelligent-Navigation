@@ -4,7 +4,9 @@ import com.seewhy.syaiagent.agent.SyManus;
 import com.seewhy.syaiagent.app.TravelMaster;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
@@ -33,7 +35,11 @@ public class TravelController {
     private ChatModel dashscopeChatModel;
 
     @Resource
-    private SyManus SyManus;
+    private SyManus syManusAgent;
+
+    @Resource
+    @Qualifier("manusChatMemory")
+    private ChatMemory manusChatMemory;
 
     // track active SSE sessions by chatId to prevent duplicate concurrent processing
     private final Map<String, SseEmitter> activeEmitters = new ConcurrentHashMap<>();
@@ -224,14 +230,15 @@ public Flux<String> streamChat(@RequestParam String message,
     }
 
     /**
-     * 调用 Manus 智能体（流式）
+     * 调用 Manus 智能体（流式）。支持 chatId 多轮对话：同一 chatId 会带上近期历史，便于解析「他/她」等指代。
      */
     @GetMapping("/manus/chat")
-    public SseEmitter doChatWithManus(@RequestParam String message) {
-        // 为避免单例状态冲突，每次请求创建新的智能体实例
-        SyManus agent = (SyManus != null)
-                ? new SyManus(allTools, dashscopeChatModel)
-                : new SyManus(allTools, dashscopeChatModel);
+    public SseEmitter doChatWithManus(@RequestParam String message,
+                                      @RequestParam(required = false) String chatId) {
+        String id = chatId != null && !chatId.isBlank() ? chatId : generateChatId();
+        SyManus agent = new SyManus(allTools, dashscopeChatModel);
+        agent.setConversationChatId(id);
+        agent.setConversationChatMemory(manusChatMemory);
         return agent.runStream(message);
     }
 

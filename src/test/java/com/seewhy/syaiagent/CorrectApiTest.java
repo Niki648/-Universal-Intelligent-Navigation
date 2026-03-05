@@ -4,16 +4,24 @@ import okhttp3.*;
 
 import java.io.IOException;
 
+/**
+ * 手动测试 Dashscope API 连通性。请设置环境变量 DASHSCOPE_API_KEY 后运行。
+ */
 public class CorrectApiTest {
 
     public static void main(String[] args) {
         System.out.println("🔧 正确测试 Dashscope API...\n");
 
-        // 正确的 API 端点
-        testCorrectEndpoint();
+        String apiKey = System.getenv("DASHSCOPE_API_KEY");
+        if (apiKey == null || apiKey.isBlank()) {
+            System.err.println("请设置环境变量 DASHSCOPE_API_KEY 后再运行此测试。");
+            return;
+        }
+
+        testCorrectEndpoint(apiKey);
     }
 
-    private static void testCorrectEndpoint() {
+    private static void testCorrectEndpoint(String apiKey) {
         OkHttpClient client = new OkHttpClient();
 
         // 正确的请求体
@@ -39,7 +47,7 @@ public class CorrectApiTest {
 
         Request request = new Request.Builder()
                 .url(url)
-                .addHeader("Authorization", "Bearer sk-3fe5b9bfa6004c24ad600c48be06a96f")
+                .addHeader("Authorization", "Bearer " + apiKey)
                 .addHeader("Content-Type", "application/json")
                 .post(body)
                 .build();

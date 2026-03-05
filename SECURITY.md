@@ -6,14 +6,14 @@
 
 在运行前设置以下环境变量：
 
-| 变量名 | 说明 |
-|--------|------|
-| `DB_URL` | 数据库连接 URL，如 `jdbc:postgresql://host:5432/dbname` |
-| `DB_USERNAME` | 数据库用户名 |
-| `DB_PASSWORD` | 数据库密码 |
-| `DASHSCOPE_API_KEY` | 阿里云百炼 / DashScope API Key |
-| `SEARCH_API_KEY` | 搜索 API Key（主应用） |
-| `PEXELS_API_KEY` | Pexels 图片搜索 API Key（sy-image-search-mcp 子模块） |
+| 变量名              | 说明                                                                       |
+| ------------------- | -------------------------------------------------------------------------- |
+| `DB_URL`            | 数据库连接 URL，如 `jdbc:postgresql://host:5432/dbname`                    |
+| `DB_USERNAME`       | 数据库用户名                                                               |
+| `DB_PASSWORD`       | 数据库密码                                                                 |
+| `DASHSCOPE_API_KEY` | 阿里云百炼 / DashScope API Key                                             |
+| `SEARCH_API_KEY`    | 搜索 API Key（主应用）                                                     |
+| `PEXELS_API_KEY`    | Pexels 图片搜索 API Key（sy-image-search-mcp 子模块）                      |
 | `AMAP_MAPS_API_KEY` | 高德地图 MCP 服务 API Key（启用 amap-maps 时需在启动前设置，子进程会继承） |
 
 示例（Windows PowerShell）：

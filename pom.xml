@@ -12,7 +12,7 @@
     <artifactId>sy-ai-agent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>sy-ai-agent</name>
-    <description>sy-ai-agent</description>
+    <description>寰宇智导 · 基于 Spring AI 的旅行规划与 SyManus 智能体系统（RAG、ReAct 工具调用、流式对话）</description>
 
     <properties>
         <java.version>21</java.version>
