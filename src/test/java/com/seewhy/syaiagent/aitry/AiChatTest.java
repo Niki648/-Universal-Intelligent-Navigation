@@ -1,4 +1,4 @@
-package com.seewhy.syaiagent;
+package com.seewhy.syaiagent.aitry;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.model.ChatModel;
