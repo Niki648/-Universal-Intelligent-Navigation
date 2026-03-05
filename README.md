@@ -156,7 +156,7 @@ npm run dev
 
 - [SECURITY.md](SECURITY.md)：敏感信息与安全配置说明。
 - [docs/MCP-SETUP.md](docs/MCP-SETUP.md)：**sy-image-search-mcp**（MCP 图片搜索服务）的构建、SSE/stdio 启动与主应用接入说明。
-- [docs/screenshots/README.md](docs/screenshots/README.md)：截图说明。
+- [docs/screenshots/README.md](docs/screenshots/README.md)：运行生成截图和文件说明。
 - PDF 中文字体：若使用 iText 生成中文 PDF，需配置字体，见 `src/main/resources/fonts/`（如有）或 iText 文档。
 
 ---
