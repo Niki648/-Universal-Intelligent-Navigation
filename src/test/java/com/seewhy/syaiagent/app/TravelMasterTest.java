@@ -2,6 +2,7 @@ package com.seewhy.syaiagent.app;
 
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -40,7 +41,9 @@ class TravelMasterTest {
         Assertions.assertNotNull(travelReport.title());
     }
 
+    /** 依赖 PostgreSQL + PgVector，无可用数据库时跳过；需跑此用例时请去掉 @Disabled 并配置好数据源 */
     @Test
+    @Disabled("Requires PostgreSQL and PgVector; enable when DB is available")
     void doChatWithRag() {
         String chatId = UUID.randomUUID().toString();
         // 测试对旅行知识库的查询

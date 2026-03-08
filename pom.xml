@@ -177,6 +177,18 @@
 
     <build>
         <plugins>
+            <!-- 打包时默认跳过依赖外部服务的测试，确保 mvn package 成功；完整测试请用 -DskipTests=false 并保证 PostgreSQL/Ollama 可用 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- 排除依赖外部服务的测试：OllamaTest 需本地 Ollama；TravelMasterTest.doChatWithRag 已用 @Disabled 标注，需 PostgreSQL 时再启用 -->
+                    <excludes>
+                        <exclude>**/OllamaTest.java</exclude>
+                    </excludes>
+                    <!-- 若希望打包时完全不执行任何测试，使用: mvn clean package -DskipTests 或 -P skip-all-tests -->
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -207,6 +219,24 @@
             </plugin>
         </plugins>
     </build>
+
+    <!-- 打包时跳过全部测试：mvn clean package -P skip-all-tests 或 mvn clean package -DskipTests -->
+    <profiles>
+        <profile>
+            <id>skip-all-tests</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <skipTests>true</skipTests>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
     <!-- 仓库配置 -->
     <repositories>
