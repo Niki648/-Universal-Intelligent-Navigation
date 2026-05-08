@@ -3,7 +3,7 @@
 #
 # 也可通过环境变量配置，无需本文件：
 #   DB_URL, DB_USERNAME, DB_PASSWORD
-#   DASHSCOPE_API_KEY
+#   DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_CHAT_MODEL
 #   SEARCH_API_KEY
 
 spring:
@@ -13,8 +13,12 @@ spring:
     password: your_password
 
   ai:
-    dashscope:
-      api-key: your-dashscope-api-key
+    openai:
+      api-key: ${DEEPSEEK_API_KEY:your-deepseek-api-key}
+      base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+      chat:
+        options:
+          model: ${DEEPSEEK_CHAT_MODEL:deepseek-chat}
 
 search-api:
   api-key: your-search-api-key

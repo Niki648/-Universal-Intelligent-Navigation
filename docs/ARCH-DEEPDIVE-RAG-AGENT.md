@@ -33,7 +33,7 @@
 
 #### 3. 向量化与 PGvector 选型
 
-- **Embedding 模型**：使用 DashScope 提供的文本 Embedding 模型，将每个 chunk 编码为高维向量。
+- **Embedding 模型**：使用 Spring AI 配置的 Embedding 模型，将每个 chunk 编码为高维向量。
 - **向量库选型：PGvector**：
   - 与 Postgres 深度集成，部署和维护成本低，易于与现有数据库生态整合。
   - 支持多种距离度量与索引结构，其中我在本项目里使用 **HNSW + 余弦相似度**。

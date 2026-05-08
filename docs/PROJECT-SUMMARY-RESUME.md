@@ -3,7 +3,7 @@
 ## 一、简历风格项目描述（可直接用于简历）
 
 - **自主实现对话记忆持久化**：为解决服务重启后多轮对话记忆丢失问题，基于文件系统与 Kryo 序列化库设计了 `FileBasedChatMemory`，实现 Spring AI `ChatMemory` 接口，按会话 ID 将对话状态序列化存储为 `.kryo` 文件并支持快速加载，保障用户对话的连续性；Kryo 将对象序列化为字节数组，便于后续扩展至 Redis 等存储。
-- **设计实现 RAG 检索增强模块**：自定义 VectorStore 配置与检索流程，结合 DashScope Embedding 模型将知识库文本存储于 PGvector 向量数据库（HNSW 索引、余弦距离），通过 Filter 元数据过滤与相似度阈值实现多维度过滤与语义相似度检索，并封装为 `RetrievalAugmentationAdvisor`，提升智能体回答的准确性与相关性。
+- **设计实现 RAG 检索增强模块**：自定义 VectorStore 配置与检索流程，结合 Spring AI Embedding 模型将知识库文本存储于 PGvector 向量数据库（HNSW 索引、余弦距离），通过 Filter 元数据过滤与相似度阈值实现多维度过滤与语义相似度检索，并封装为 `RetrievalAugmentationAdvisor`，提升智能体回答的准确性与相关性。
 - **构建具备自主规划能力的 AI 智能体**：基于 ReAct（Reasoning + Acting）框架实现 `ReActAgent` → `ToolCallAgent` → SyManus 层次结构，使智能体能自主分解任务、决策工具调用链；通过最大步数限制（maxSteps）与 `AgentState` 状态机（IDLE/RUNNING/FINISHED/ERROR），避免智能体陷入逻辑死循环，并在达到步数或完成时正确收尾。
 - **实现灵活可扩展的工具调用框架**：采用 Spring `@Configuration` + `@Bean` 构建集中式工具注册中心 `ToolRegistration`，通过 `ToolCallbacks.from()` 与 Spring 注入实现工具的松耦合注册；利用 `@Tool` / `@ToolParam` 注解封装网页搜索、网页抓取、资源下载、文件读写、终端执行、PDF 生成、图片搜索（Pexels）、任务终止等能力。
 - **开发 MCP 服务扩展 AI 能力边界**：基于 Spring AI MCP Server 独立子模块 `sy-image-search-mcp` 集成 Pexels 图片 API，提供图片搜索 MCP 服务，使主智能体通过 MCP 客户端调用并整合图片检索能力；通过 `application-stdio` / `application-sse` 等 Profile 支持 Stdio 与 SSE 两套传输模式，适配本地开发与云端/远程部署。

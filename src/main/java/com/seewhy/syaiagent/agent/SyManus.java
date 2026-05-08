@@ -1,6 +1,7 @@
 package com.seewhy.syaiagent.agent;
 
 import com.seewhy.syaiagent.advisor.MyLoggerAdvisor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
@@ -12,7 +13,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class SyManus extends ToolCallAgent {
 
-    public SyManus(ToolCallback[] allTools, ChatModel dashscopeChatModel) {
+    public SyManus(ToolCallback[] allTools, @Qualifier("openAiChatModel") ChatModel chatModel) {
         super(allTools);
         this.setName("SyManus");
         // 核心定位：既保持「全能 / 主动规划 / 多步工具组合」，又避免无谓折腾和无关操作
@@ -61,7 +62,7 @@ public class SyManus extends ToolCallAgent {
         // 在保证能力的前提下，限制最大思考/行动步数，避免无止境折腾
         this.setMaxSteps(10);
         // 初始化 AI 对话客户端
-        ChatClient chatClient = ChatClient.builder(dashscopeChatModel)
+        ChatClient chatClient = ChatClient.builder(chatModel)
                 .defaultAdvisors(new MyLoggerAdvisor())
                 .build();
         this.setChatClient(chatClient);

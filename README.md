@@ -2,7 +2,7 @@
 
 > **说明**：本项目仅作个人学习与求职展示使用。
 
-基于 **Spring AI** 与 **阿里云百炼/通义** 大模型的智能旅行规划系统，提供多轮对话规划、RAG 知识库问答、结构化报告生成，以及具备自主规划能力的 **SyManus 超级智能体**（搜索、图片搜索、网页抓取、PDF 生成、文件读写等工具调用）。支持 **MCP（Model Context Protocol）** 扩展，可选接入自研 **sy-image-search-mcp** 图片搜索服务（Pexels API）。
+基于 **Spring AI** 与 **DeepSeek** 大模型的智能旅行规划系统，提供多轮对话规划、RAG 知识库问答、结构化报告生成，以及具备自主规划能力的 **SyManus 超级智能体**（搜索、图片搜索、网页抓取、PDF 生成、文件读写等工具调用）。支持 **MCP（Model Context Protocol）** 扩展，可选接入自研 **sy-image-search-mcp** 图片搜索服务（Pexels API）。
 
 ---
 
@@ -25,7 +25,7 @@
 | 类别 | 技术 |
 |------|------|
 | 后端框架 | Spring Boot 3.4、Java 21 |
-| AI / 大模型 | Spring AI、阿里云百炼 DashScope（通义千问） |
+| AI / 大模型 | Spring AI、DeepSeek（OpenAI-compatible API） |
 | 对话与记忆 | Spring AI ChatClient、MessageWindowChatMemory、Kryo 持久化 |
 | RAG | Spring AI VectorStore、Markdown 文档加载、关键词增强 |
 | 智能体 | 自研 ReAct 循环、ToolCallAgent、SyManus |
@@ -112,14 +112,14 @@ sy-ai-agent/
 复制 `src/main/resources/application-local.yml.example` 为 `application-local.yml`，填入：
 
 - 数据库：`spring.datasource.url / username / password`（若使用 RAG/向量库）
-- `spring.ai.dashscope.api-key`：阿里云百炼 API Key
+- `spring.ai.openai.api-key`：DeepSeek API Key
 - `search-api.api-key`：搜索 API Key
 - （可选）启用 **sy-image-search-mcp** 时：`PEXELS_API_KEY` 或子模块内 `application-local.yml` 的 `pexels.api-key`，见 [SECURITY.md](SECURITY.md)。
 
 `application-local.yml` 已加入 `.gitignore`，不会提交到 Git。
 
 **方式二（环境变量）**  
-见 [SECURITY.md](SECURITY.md)，支持 `DASHSCOPE_API_KEY`、`SEARCH_API_KEY`、`DB_*` 等。
+见 [SECURITY.md](SECURITY.md)，支持 `DEEPSEEK_API_KEY`、`SEARCH_API_KEY`、`DB_*` 等。
 
 ### 2. 启动后端
 
@@ -164,4 +164,4 @@ npm run dev
 ## 开源协议与免责声明
 
 - 本项目采用 [MIT License](LICENSE) 开源。
-- 本项目仅供**学习与求职展示**使用。使用阿里云百炼/通义等第三方 API 时，请遵守其服务条款与使用规范。
+- 本项目仅供**学习与求职展示**使用。使用 DeepSeek 等第三方 API 时，请遵守其服务条款与使用规范。

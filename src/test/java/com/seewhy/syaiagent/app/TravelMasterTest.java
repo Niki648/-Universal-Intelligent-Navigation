@@ -1,14 +1,17 @@
 package com.seewhy.syaiagent.app;
 
 import jakarta.annotation.Resource;
+import com.seewhy.syaiagent.model.TravelReport;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.UUID;
 
 @SpringBootTest
+@Tag("integration")
 class TravelMasterTest {
 
     @Resource
@@ -35,7 +38,7 @@ class TravelMasterTest {
         String chatId = UUID.randomUUID().toString();
         // 提供一个具体的旅行规划请求，以生成报告
         String message = "我计划下个月去日本东京玩5天，预算1万元，主要想体验美食和城市文化，请帮我生成一份规划报告。";
-        TravelMaster.TravelReport travelReport = travelMaster.doChatWithReport(message, chatId);
+        TravelReport travelReport = travelMaster.doChatWithReport(message, chatId);
         Assertions.assertNotNull(travelReport);
         // 可以增加更多断言，如报告标题不为空等
         Assertions.assertNotNull(travelReport.title());

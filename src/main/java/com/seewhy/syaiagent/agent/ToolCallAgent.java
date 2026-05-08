@@ -2,7 +2,6 @@ package com.seewhy.syaiagent.agent;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import com.seewhy.syaiagent.agent.model.AgentState;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -16,6 +15,7 @@ import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.model.tool.ToolExecutionResult;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.tool.ToolCallback;
 
 import java.util.List;
@@ -46,8 +46,8 @@ public class ToolCallAgent extends ReActAgent {
         this.availableTools = availableTools;
         this.toolCallingManager = ToolCallingManager.builder().build();
         // 禁用 Spring AI 内置的工具调用机制，自己维护选项和消息上下文
-        this.chatOptions = DashScopeChatOptions.builder()
-                .withInternalToolExecutionEnabled(false)
+        this.chatOptions = OpenAiChatOptions.builder()
+                .internalToolExecutionEnabled(false)
                 .build();
     }
 
@@ -98,12 +98,12 @@ public class ToolCallAgent extends ReActAgent {
             }
         } catch (Exception e) {
             String msg = String.valueOf(e.getMessage());
-            // DashScope 账户欠费/过期：不要重试，直接给用户明确提示并结束本次任务
+            // 模型账户欠费/过期：不要重试，直接给用户明确提示并结束本次任务
             if (msg.contains("Arrearage") || msg.contains("overdue-payment") || msg.contains("\"code\":\"Arrearage\"")) {
                 log.warn("{} 调用模型失败（疑似欠费/过期）：{}", getName(), msg);
                 setState(AgentState.FINISHED);
                 getMessageList().add(new AssistantMessage(
-                        "[错误] 模型服务调用被拒绝：账户欠费/过期（DashScope 返回 Arrearage）。请为模型账户充值/续费，或更换可用的模型配置后再试。"
+                        "[错误] 模型服务调用被拒绝：账户欠费/过期。请为模型账户充值/续费，或更换可用的模型配置后再试。"
                 ));
                 return false;
             }

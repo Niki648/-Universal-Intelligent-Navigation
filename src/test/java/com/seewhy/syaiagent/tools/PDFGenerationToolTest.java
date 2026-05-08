@@ -1,5 +1,6 @@
 package com.seewhy.syaiagent.tools;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -7,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class PDFGenerationToolTest {
 
     @Test
+    @Tag("integration")
     void generatePDF() {
         PDFGenerationTool tool = new PDFGenerationTool();
         String fileName = "demo1.pdf";

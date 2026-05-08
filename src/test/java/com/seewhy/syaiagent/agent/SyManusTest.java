@@ -2,10 +2,12 @@ package com.seewhy.syaiagent.agent;
 
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
+@Tag("integration")
 class SyManusTest {
 
     @Resource

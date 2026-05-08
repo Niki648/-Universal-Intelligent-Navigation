@@ -12,16 +12,12 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   ai:
-    dashscope:
-      api-key: ${DASHSCOPE_API_KEY:}
+    openai:
+      api-key: ${DEEPSEEK_API_KEY:}
+      base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
       chat:
         options:
-          model: qwen-plus
-    ollama:
-      base-url: http://localhost:11434
-      chat:
-        model: gemma3:1b
-
+          model: ${DEEPSEEK_CHAT_MODEL:deepseek-chat}
     # MCP 客户端：启用后会在启动时连接/拉起 MCP 服务，若服务未就绪会导致启动超时失败。
   # 需要时取消注释，并先确保：SSE 模式已启动 sy-image-search-mcp（端口 8127）；或 stdio 模式已构建 jar 且 amap 需 npx。
 #  mcp:

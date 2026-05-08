@@ -29,8 +29,8 @@ public class TravelMasterVectorStoreConfig {
 
     @Bean
     @Primary
-    VectorStore TravelMasterVectorStore(EmbeddingModel dashscopeEmbeddingModel) {
-        SimpleVectorStore simpleVectorStore = SimpleVectorStore.builder(dashscopeEmbeddingModel).build();
+    VectorStore TravelMasterVectorStore(EmbeddingModel embeddingModel) {
+        SimpleVectorStore simpleVectorStore = SimpleVectorStore.builder(embeddingModel).build();
         // 加载文档
         List<Document> documentList = TravelMasterDocumentLoader.loadMarkdowns();
         // 自主切分文档
