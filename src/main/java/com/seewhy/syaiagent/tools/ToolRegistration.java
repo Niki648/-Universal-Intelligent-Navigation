@@ -1,5 +1,6 @@
 package com.seewhy.syaiagent.tools;
 
+import com.seewhy.syaiagent.guardrail.GuardrailService;
 import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,13 +20,16 @@ public class ToolRegistration {
     @Autowired
     private ImageSearchTool imageSearchTool;
 
+    @Autowired
+    private GuardrailService guardrailService;
+
     @Bean
     public ToolCallback[] allTools() {
-        FileOperationTool fileOperationTool = new FileOperationTool();
+        FileOperationTool fileOperationTool = new FileOperationTool(guardrailService);
         WebSearchTool webSearchTool = new WebSearchTool(searchApiKey);
         WebScrapingTool webScrapingTool = new WebScrapingTool();
-        ResourceDownloadTool resourceDownloadTool = new ResourceDownloadTool();
-        TerminalOperationTool terminalOperationTool = new TerminalOperationTool();
+        ResourceDownloadTool resourceDownloadTool = new ResourceDownloadTool(guardrailService);
+        TerminalOperationTool terminalOperationTool = new TerminalOperationTool(guardrailService);
         PDFGenerationTool pdfGenerationTool = new PDFGenerationTool();
         TerminateTool terminateTool = new TerminateTool();
         return ToolCallbacks.from(

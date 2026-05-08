@@ -2,6 +2,9 @@ package com.seewhy.syaiagent.service;
 
 import com.seewhy.syaiagent.advisor.MyLoggerAdvisor;
 import com.seewhy.syaiagent.rag.QueryRewriter;
+import com.seewhy.syaiagent.trace.AgentTraceService;
+import com.seewhy.syaiagent.trace.AgentTraceStatus;
+import com.seewhy.syaiagent.trace.AgentTraceStep;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
@@ -19,26 +22,32 @@ public class TravelRagService {
     private final ChatClient chatClient;
     private final ObjectProvider<VectorStore> vectorStoreProvider;
     private final QueryRewriter queryRewriter;
+    private final AgentTraceService agentTraceService;
 
     public TravelRagService(@Qualifier("travelChatClient") ChatClient chatClient,
                             ObjectProvider<VectorStore> vectorStoreProvider,
-                            QueryRewriter queryRewriter) {
+                            QueryRewriter queryRewriter,
+                            AgentTraceService agentTraceService) {
         this.chatClient = chatClient;
         this.vectorStoreProvider = vectorStoreProvider;
         this.queryRewriter = queryRewriter;
+        this.agentTraceService = agentTraceService;
     }
 
     public String chatWithRag(String message, String chatId) {
-        log.info("旅行知识库查询[{}]: {}", chatId, message);
+        log.info("Travel RAG query [{}]: {}", chatId, message);
+        agentTraceService.record(chatId, AgentTraceStep.RAG_RETRIEVAL, AgentTraceStatus.STARTED, "Preparing travel knowledge retrieval.");
 
         VectorStore vectorStore = vectorStoreProvider.getIfAvailable();
         if (vectorStore == null) {
-            log.warn("RAG 向量库未启用，跳过知识库问答[{}]", chatId);
+            log.warn("VectorStore is unavailable, skipping RAG [{}]", chatId);
+            agentTraceService.record(chatId, AgentTraceStep.RAG_RETRIEVAL, AgentTraceStatus.SKIPPED, "VectorStore is not available.");
             return "当前未启用 RAG 向量库，请先配置并启用 VectorStore 后再使用知识库问答。";
         }
 
         String rewrittenMessage = queryRewriter.doQueryRewrite(message);
-        log.debug("查询重写结果[{}]: {} -> {}", chatId, message, rewrittenMessage);
+        log.debug("RAG rewritten query [{}]: {} -> {}", chatId, message, rewrittenMessage);
+        agentTraceService.record(chatId, AgentTraceStep.RAG_RETRIEVAL, AgentTraceStatus.COMPLETED, "Knowledge retrieval query prepared.");
 
         ChatResponse chatResponse = chatClient
                 .prompt()
@@ -50,7 +59,7 @@ public class TravelRagService {
                 .chatResponse();
 
         String content = chatResponse.getResult().getOutput().getText();
-        log.info("旅行知识库回复[{}]: {}", chatId, content);
+        log.info("Travel RAG response [{}]: {}", chatId, content);
         return content;
     }
 }

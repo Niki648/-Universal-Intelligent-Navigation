@@ -1,6 +1,9 @@
 package com.seewhy.syaiagent.service;
 
 import com.seewhy.syaiagent.advisor.MyLoggerAdvisor;
+import com.seewhy.syaiagent.trace.AgentTraceService;
+import com.seewhy.syaiagent.trace.AgentTraceStatus;
+import com.seewhy.syaiagent.trace.AgentTraceStep;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -15,15 +18,19 @@ public class TravelToolService {
 
     private final ChatClient chatClient;
     private final ToolCallback[] travelTools;
+    private final AgentTraceService agentTraceService;
 
     public TravelToolService(@Qualifier("travelChatClient") ChatClient chatClient,
-                             ToolCallback[] travelTools) {
+                             ToolCallback[] travelTools,
+                             AgentTraceService agentTraceService) {
         this.chatClient = chatClient;
         this.travelTools = travelTools;
+        this.agentTraceService = agentTraceService;
     }
 
     public String chatWithTools(String message, String chatId) {
-        log.info("旅行工具调用[{}]: {}", chatId, message);
+        log.info("Travel tool chat [{}]: {}", chatId, message);
+        agentTraceService.record(chatId, AgentTraceStep.TOOL_CALL, AgentTraceStatus.STARTED, "Tool-enabled travel chat started.");
 
         ChatResponse chatResponse = chatClient
                 .prompt()
@@ -35,7 +42,8 @@ public class TravelToolService {
                 .chatResponse();
 
         String content = chatResponse.getResult().getOutput().getText();
-        log.info("旅行工具回复[{}]: {}", chatId, content);
+        log.info("Travel tool response [{}]: {}", chatId, content);
+        agentTraceService.record(chatId, AgentTraceStep.TOOL_CALL, AgentTraceStatus.COMPLETED, "Tool-enabled travel chat completed.");
         return content;
     }
 }

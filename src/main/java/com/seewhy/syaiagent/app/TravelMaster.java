@@ -1,7 +1,9 @@
 package com.seewhy.syaiagent.app;
 
 import com.seewhy.syaiagent.constant.TravelPromptConstant;
+import com.seewhy.syaiagent.model.TravelPlan;
 import com.seewhy.syaiagent.model.TravelReport;
+import com.seewhy.syaiagent.orchestrator.TravelOrchestratorService;
 import com.seewhy.syaiagent.service.TravelChatService;
 import com.seewhy.syaiagent.service.TravelMcpService;
 import com.seewhy.syaiagent.service.TravelRagService;
@@ -18,17 +20,20 @@ public class TravelMaster {
     private final TravelRagService travelRagService;
     private final TravelToolService travelToolService;
     private final TravelMcpService travelMcpService;
+    private final TravelOrchestratorService travelOrchestratorService;
 
     public TravelMaster(TravelChatService travelChatService,
                         TravelReportService travelReportService,
                         TravelRagService travelRagService,
                         TravelToolService travelToolService,
-                        TravelMcpService travelMcpService) {
+                        TravelMcpService travelMcpService,
+                        TravelOrchestratorService travelOrchestratorService) {
         this.travelChatService = travelChatService;
         this.travelReportService = travelReportService;
         this.travelRagService = travelRagService;
         this.travelToolService = travelToolService;
         this.travelMcpService = travelMcpService;
+        this.travelOrchestratorService = travelOrchestratorService;
     }
 
     public String doChat(String message, String chatId) {
@@ -41,6 +46,10 @@ public class TravelMaster {
 
     public TravelReport doChatWithReport(String message, String chatId) {
         return travelReportService.generateReport(message, chatId);
+    }
+
+    public TravelPlan doStructuredPlan(String message, String chatId) {
+        return travelOrchestratorService.generatePlan(message, chatId);
     }
 
     public String doChatWithRag(String message, String chatId) {

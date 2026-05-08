@@ -6,8 +6,12 @@ import com.seewhy.syaiagent.model.ChatRequest;
 import com.seewhy.syaiagent.model.ChatResponse;
 import com.seewhy.syaiagent.model.HealthResponse;
 import com.seewhy.syaiagent.model.QuickRequest;
+import com.seewhy.syaiagent.model.TravelPlan;
+import com.seewhy.syaiagent.model.TravelPlanRequest;
 import com.seewhy.syaiagent.model.TravelReport;
 import com.seewhy.syaiagent.service.SseEmitterStreamService;
+import com.seewhy.syaiagent.trace.AgentTraceEvent;
+import com.seewhy.syaiagent.trace.AgentTraceService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -20,6 +24,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
 import reactor.core.publisher.Flux;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -37,16 +42,20 @@ public class TravelController {
 
     private final SseEmitterStreamService sseEmitterStreamService;
 
+    private final AgentTraceService agentTraceService;
+
     public TravelController(TravelMaster travelMaster,
                             ToolCallback[] allTools,
                             @Qualifier("openAiChatModel") ChatModel chatModel,
                             @Qualifier("manusChatMemory") ChatMemory manusChatMemory,
-                            SseEmitterStreamService sseEmitterStreamService) {
+                            SseEmitterStreamService sseEmitterStreamService,
+                            AgentTraceService agentTraceService) {
         this.travelMaster = travelMaster;
         this.allTools = allTools;
         this.chatModel = chatModel;
         this.manusChatMemory = manusChatMemory;
         this.sseEmitterStreamService = sseEmitterStreamService;
+        this.agentTraceService = agentTraceService;
     }
 
     /**
@@ -129,6 +138,15 @@ public class TravelController {
     }
 
     /**
+     * 结构化旅行规划
+     */
+    @PostMapping("/plan")
+    public TravelPlan generatePlan(@Valid @RequestBody TravelPlanRequest request) {
+        String chatId = normalizeChatId(request.chatId());
+        return travelMaster.doStructuredPlan(request.message(), chatId);
+    }
+
+    /**
      * 旅行知识库问答
      */
     @PostMapping("/rag")
@@ -160,6 +178,21 @@ public class TravelController {
     @GetMapping("/health")
     public HealthResponse healthCheck() {
         return new HealthResponse("ok", "寰宇智导旅行规划系统运行正常");
+    }
+
+    @GetMapping("/trace/{chatId}")
+    public List<AgentTraceEvent> getTraceEvents(@PathVariable String chatId) {
+        return agentTraceService.getEvents(chatId);
+    }
+
+    @GetMapping(value = "/trace/{chatId}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<AgentTraceEvent>> streamTraceEvents(@PathVariable String chatId) {
+        return agentTraceService.stream(chatId)
+                .map(event -> ServerSentEvent.<AgentTraceEvent>builder()
+                        .event(event.step().name())
+                        .id(event.traceId())
+                        .data(event)
+                        .build());
     }
 
     private String generateChatId() {

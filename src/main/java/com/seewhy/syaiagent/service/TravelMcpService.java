@@ -1,6 +1,9 @@
 package com.seewhy.syaiagent.service;
 
 import com.seewhy.syaiagent.advisor.MyLoggerAdvisor;
+import com.seewhy.syaiagent.trace.AgentTraceService;
+import com.seewhy.syaiagent.trace.AgentTraceStatus;
+import com.seewhy.syaiagent.trace.AgentTraceStep;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -15,15 +18,19 @@ public class TravelMcpService {
 
     private final ChatClient chatClient;
     private final ToolCallbackProvider toolCallbackProvider;
+    private final AgentTraceService agentTraceService;
 
     public TravelMcpService(@Qualifier("travelChatClient") ChatClient chatClient,
-                            ToolCallbackProvider toolCallbackProvider) {
+                            ToolCallbackProvider toolCallbackProvider,
+                            AgentTraceService agentTraceService) {
         this.chatClient = chatClient;
         this.toolCallbackProvider = toolCallbackProvider;
+        this.agentTraceService = agentTraceService;
     }
 
     public String chatWithMcp(String message, String chatId) {
-        log.info("旅行MCP服务调用[{}]: {}", chatId, message);
+        log.info("Travel MCP chat [{}]: {}", chatId, message);
+        agentTraceService.record(chatId, AgentTraceStep.MCP_CALL, AgentTraceStatus.STARTED, "MCP travel service call started.");
 
         ChatResponse chatResponse = chatClient
                 .prompt()
@@ -35,7 +42,8 @@ public class TravelMcpService {
                 .chatResponse();
 
         String content = chatResponse.getResult().getOutput().getText();
-        log.info("旅行MCP服务回复[{}]: {}", chatId, content);
+        log.info("Travel MCP response [{}]: {}", chatId, content);
+        agentTraceService.record(chatId, AgentTraceStep.MCP_CALL, AgentTraceStatus.COMPLETED, "MCP travel service call completed.");
         return content;
     }
 }
