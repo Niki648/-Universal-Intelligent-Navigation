@@ -1,11 +1,19 @@
 <template>
   <div id="app-root">
     <header class="topbar">
-      <h1>寰宇智导 前端演示</h1>
-      <nav>
-        <router-link to="/">主页</router-link>
-        <router-link to="/travel">寰宇智导应用</router-link>
-        <router-link to="/manus">AI 超级智能体</router-link>
+      <router-link class="brand" to="/">
+        <span class="brand-mark">*</span>
+        <span>
+          <strong>Wayfinder Guild</strong>
+          <small>&#35753; AI &#25214;&#21040;&#27491;&#30830;&#30340;&#36335;</small>
+        </span>
+      </router-link>
+      <nav aria-label="Main navigation">
+        <router-link to="/">Map</router-link>
+        <router-link to="/profile">Profile</router-link>
+        <router-link to="/projects">Projects</router-link>
+        <router-link to="/travel-agent">Travel Agent</router-link>
+        <router-link to="/manus-agent">Tool Agent</router-link>
       </nav>
     </header>
     <main>
@@ -13,9 +21,3 @@
     </main>
   </div>
 </template>
-
-<style scoped>
-#app-root { max-width: 900px; margin: 20px auto; }
-.topbar { display:flex; align-items:center; justify-content:space-between; }
-.topbar nav a { margin-left: 12px; }
-</style>

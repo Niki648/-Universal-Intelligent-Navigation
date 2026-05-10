@@ -1,6 +1,6 @@
 package com.seewhy.syaiagent.service;
 
-import com.seewhy.syaiagent.constant.TravelPromptConstant;
+import com.seewhy.syaiagent.constant.WayfinderPromptConstant;
 import com.seewhy.syaiagent.model.TravelReport;
 import com.seewhy.syaiagent.trace.AgentTraceService;
 import com.seewhy.syaiagent.trace.AgentTraceStatus;
@@ -30,7 +30,7 @@ public class TravelReportService {
 
         TravelReport travelReport = chatClient
                 .prompt()
-                .system(TravelPromptConstant.REPORT_PROMPT)
+                .system(WayfinderPromptConstant.REPORT_PROMPT)
                 .user(message)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
                 .call()

@@ -1,10 +1,10 @@
-# 寰宇智导 · Agentic Travel Planning Backend
+# Wayfinder Guild · AI Engineering Portfolio
 
 > 本项目用于个人学习、求职展示与大模型应用工程实践。
 
-寰宇智导是一个基于 **Spring Boot 3.4 + Java 21 + Spring AI + DeepSeek** 的垂直旅行规划智能体系统。项目从普通旅行聊天系统升级为具备 **Skills、结构化输出、评估 Harness、Guardrails、Agent Trace、轻量多智能体编排** 的 Agentic Travel Planning Backend。
+Wayfinder Guild 是一个基于 **Spring Boot 3.4 + Java 21 + Spring AI + DeepSeek + Vue 3 + Phaser** 的 AI 工程师作品集与 Agentic AI 能力展示平台。项目以温暖星海旅行小镇为体验入口，展示旅行规划 Agent、SyManus 工具 Agent、RAG、Skills、Eval Harness、Guardrails 与 Agent Trace 等工程能力。
 
-前端使用 Vue 3 + Vite。本轮重点在后端能力建设，前端页面暂未改动。
+其中旅行规划仍然是核心业务领域，因此代码中的 `TravelPlan`、`TravelRagService` 等领域命名会保留；对外产品品牌统一使用 Wayfinder。
 
 ## 核心能力
 
@@ -39,8 +39,8 @@
 结构化旅行规划主链路：
 
 ```text
-TravelController
-  -> TravelMaster
+WayfinderTravelController
+  -> WayfinderTravelFacade
     -> TravelOrchestratorService
       -> RequirementCollectorService
       -> ItineraryPlannerService
@@ -69,7 +69,7 @@ SkillLoaderService    Markdown Skills 加载与选择
 sy-ai-agent/
 ├─ src/main/java/com/seewhy/syaiagent/
 │  ├─ controller/       # HTTP 接口
-│  ├─ app/              # TravelMaster 兼容门面
+│  ├─ app/              # WayfinderTravelFacade 兼容门面
 │  ├─ service/          # Travel Chat / Plan / RAG / Tool / MCP 服务
 │  ├─ orchestrator/     # 轻量多智能体编排与专家服务
 │  ├─ skill/            # Skill 数据模型与加载服务
@@ -231,16 +231,17 @@ mvn test -P with-integration-tests
 mvn spring-boot:run -Dspring-boot.run.arguments=--travel.eval.enabled=true
 ```
 
-测试与打包说明见：[docs/打包与测试说明.md](docs/打包与测试说明.md)。
+测试与发布验证说明见：[docs/VERIFY.md](docs/VERIFY.md) 与 [docs/TEST-REPORT-WAYFINDER.md](docs/TEST-REPORT-WAYFINDER.md)。
 
 ## 相关文档
 
 - [Agentic Travel Backend 架构说明](docs/AGENTIC-TRAVEL-BACKEND.md)
-- [Agentic Travel Backend 面试讲解稿](docs/INTERVIEW-AGENTIC-TRAVEL-BACKEND.md)
-- [MCP 图片搜索服务接入](docs/MCP-SETUP.md)
-- [RAG / Agent 深度说明](docs/ARCH-DEEPDIVE-RAG-AGENT.md)
-- [面试深挖 Q&A](docs/INTERVIEW-DEEPDIVE-QA.md)
-- [项目简历表述](docs/PROJECT-SUMMARY-RESUME.md)
+- [Wayfinder Guild PRD](docs/PRD-WAYFINDER-GUILD.md)
+- [Wayfinder 技术设计](docs/TECH-DESIGN-WAYFINDER.md)
+- [部署指南](docs/DEPLOYMENT.md)
+- [RAG 成本策略](docs/RAG-COST-STRATEGY.md)
+- [命名规范](docs/NAMING-GUIDE.md)
+- [命名审计](docs/NAMING-AUDIT.md)
 - [安全配置说明](SECURITY.md)
 
 ## 安全说明
@@ -252,3 +253,71 @@ mvn spring-boot:run -Dspring-boot.run.arguments=--travel.eval.enabled=true
 ## License
 
 本项目采用 [MIT License](LICENSE)。
+
+## Wayfinder Guild Launch Docs
+
+Wayfinder Guild is the production-ready portfolio layer of this project: a warm cosmic travel RPG site for demonstrating Agent, RAG, Skills, Eval, Trace, Guardrails, and backend architecture.
+
+### RAG cost-control modes
+
+Public production does not require PgVector or a cloud database. Configure RAG with:
+
+```env
+TRAVEL_RAG_MODE=demo
+```
+
+Supported values:
+
+- `demo` - stable public RAG explain response with no database cost.
+- `lightweight` - searches local `src/main/resources/document/*.md` snippets.
+- `pgvector` - optional Owner Live / local deep demo mode using PgVector `VectorStore`.
+
+If `pgvector` is selected but VectorStore is unavailable, the API degrades to lightweight Markdown retrieval and does not fail the request with a 500.
+
+Useful launch and interview documents:
+
+- [Production Deployment Guide](docs/DEPLOYMENT.md)
+- [Verification Guide](docs/VERIFY.md)
+- [Wayfinder PRD](docs/PRD-WAYFINDER-GUILD.md)
+- [Wayfinder Technical Design](docs/TECH-DESIGN-WAYFINDER.md)
+- [Wayfinder Test Report](docs/TEST-REPORT-WAYFINDER.md)
+- [Release Notes v0.1.0](docs/RELEASE-NOTES-v0.1.0.md)
+- [RAG Cost Strategy](docs/RAG-COST-STRATEGY.md)
+- [Agentic Travel Backend Notes](docs/AGENTIC-TRAVEL-BACKEND.md)
+
+Release governance and launch review:
+
+- PRD: target users, scope, non-goals, acceptance criteria, Demo Mode / Owner Live Mode strategy
+- Technical design: frontend, backend, Agentic Travel, RPG metadata, Rust CLI, security, degradation, deployment topology
+- Test report: automated verification, manual smoke route, and known risks
+- Release notes: v0.1.0 content, config, rollback, and post-launch checks
+- Gray release plan: local acceptance, staging, small-scope access, public launch, metrics, and rollback conditions
+
+## Wayfinder CLI
+
+`tools/wayfinder-cli` is a Rust developer toolchain for checking Wayfinder Guild metadata before demos, deployments, and release candidates.
+
+Commands:
+
+- `doctor` - run all static checks and print a resource summary
+- `lint-skills` - validate `src/main/resources/skills/**/SKILL.md`
+- `lint-rpg` - validate `src/main/resources/rpg/*.json`
+- `lint-evals` - validate `evals/travel-cases.json`
+- `lint-prompts` - validate `src/main/resources/prompts/rpg/*.st`
+- `lint-naming` - validate Wayfinder Guild naming governance
+- `summary` - print counts for Skills, RPG areas/NPCs/projects/modules, eval cases, and prompt templates
+
+Example:
+
+```powershell
+cd tools/wayfinder-cli
+cargo test
+cargo run -- doctor --workspace ..\..
+cargo run -- lint-naming --workspace ..\..
+```
+
+If PowerShell has not picked up Rust in `PATH`, use:
+
+```powershell
+C:\Users\cycle\.cargo\bin\cargo.exe run -- doctor --workspace ..\..
+```

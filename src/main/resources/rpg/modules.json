@@ -1,0 +1,92 @@
+[
+  {
+    "id": "agentic-travel-backend",
+    "name": "Agentic Travel Backend",
+    "displayName": "旅行 Agent 后端",
+    "description": "围绕旅行规划场景搭建的 Agent 工程底座，负责对话、结构化规划、报告、RAG 与工具协作。",
+    "capabilities": ["chat", "structured-plan", "report-generation", "rag", "tool-calling"],
+    "endpoints": ["/api/travel/chat", "/api/travel/plan", "/api/travel/report", "/api/travel/rag"],
+    "relatedProjectIds": ["sy-ai-agent"]
+  },
+  {
+    "id": "travel-agent",
+    "name": "Travel Agent",
+    "displayName": "旅行规划 Agent",
+    "description": "把用户旅行需求拆解为目的地、天数、预算、行程、交通、住宿、风险与备选方案。",
+    "capabilities": ["requirement-collection", "itinerary-planning", "budget-estimation", "risk-advice"],
+    "endpoints": ["/api/travel/plan"],
+    "relatedProjectIds": ["sy-ai-agent"]
+  },
+  {
+    "id": "structured-plan",
+    "name": "Structured Plan",
+    "displayName": "结构化 TravelPlan",
+    "description": "面向前端卡片和报告生成的结构化旅行规划模型。",
+    "capabilities": ["schema-output", "ui-ready-data", "fallback-plan"],
+    "endpoints": ["/api/travel/plan"],
+    "relatedProjectIds": ["sy-ai-agent"]
+  },
+  {
+    "id": "skills-system",
+    "name": "Skills System",
+    "displayName": "Skills 系统",
+    "description": "从 classpath 加载旅行领域技能，按用户需求选择合适规则注入 Agent 流程。",
+    "capabilities": ["skill-loading", "skill-selection", "domain-rules"],
+    "endpoints": [],
+    "relatedProjectIds": ["sy-ai-agent"]
+  },
+  {
+    "id": "rag-memory",
+    "name": "RAG Memory",
+    "displayName": "RAG 记忆检索",
+    "description": "将旅行知识库作为检索上下文，增强模型回答的可靠性和可解释性。",
+    "capabilities": ["retrieval", "grounded-answering", "knowledge-context"],
+    "endpoints": ["/api/travel/rag"],
+    "relatedProjectIds": ["sy-ai-agent"]
+  },
+  {
+    "id": "tool-agent",
+    "name": "Tool Agent",
+    "displayName": "SyManus 工具 Agent",
+    "description": "用工具调用扩展 Agent 能力，支持搜索、文件、终端、下载与内容处理。",
+    "capabilities": ["tool-calling", "streaming-execution", "multi-turn-context"],
+    "endpoints": ["/api/travel/manus/chat"],
+    "relatedProjectIds": ["symanus-tool-agent"]
+  },
+  {
+    "id": "guarded-tools",
+    "name": "Guarded Tools",
+    "displayName": "受控工具边界",
+    "description": "为工具调用增加校验和边界，降低不安全输入或越权执行的风险。",
+    "capabilities": ["input-guardrail", "tool-boundary", "risk-reduction"],
+    "endpoints": [],
+    "relatedProjectIds": ["symanus-tool-agent", "sy-ai-agent"]
+  },
+  {
+    "id": "eval-harness",
+    "name": "Eval Harness",
+    "displayName": "评测用例集",
+    "description": "通过旅行用例和质量维度评估 Agent 输出，形成可回归的质量闭环。",
+    "capabilities": ["eval-cases", "quality-scoring", "regression-check"],
+    "endpoints": [],
+    "relatedProjectIds": ["sy-ai-agent"]
+  },
+  {
+    "id": "agent-trace",
+    "name": "Agent Trace",
+    "displayName": "执行轨迹",
+    "description": "记录 Agent 从意图识别到技能加载、行程生成、预算和风险检查的关键步骤。",
+    "capabilities": ["observability", "trace-streaming", "debugging"],
+    "endpoints": ["/api/travel/trace/{chatId}", "/api/travel/trace/{chatId}/stream"],
+    "relatedProjectIds": ["sy-ai-agent"]
+  },
+  {
+    "id": "rpg-portfolio-backend",
+    "name": "RPG Portfolio Backend",
+    "displayName": "RPG 作品集后端",
+    "description": "为 Wayfinder Guild 提供地图、NPC、项目、技能、模块和个人资料元数据。",
+    "capabilities": ["world-metadata", "npc-query", "portfolio-api", "frontend-ready-json"],
+    "endpoints": ["/api/rpg/world", "/api/rpg/npcs", "/api/rpg/projects", "/api/rpg/skills", "/api/rpg/modules", "/api/rpg/profile"],
+    "relatedProjectIds": ["wayfinder-guild"]
+  }
+]

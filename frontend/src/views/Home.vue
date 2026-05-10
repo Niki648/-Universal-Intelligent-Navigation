@@ -1,14 +1,14 @@
 <template>
-  <div class="home">
-    <h2>应用列表</h2>
-    <ul>
-      <li><router-link to="/travel">寰宇智导应用（聊天）</router-link></li>
-      <li><router-link to="/manus">AI 超级智能体（聊天）</router-link></li>
-    </ul>
-  </div>
+  <section class="home">
+    <h2>Wayfinder Guild</h2>
+    <p>This legacy home view is kept only for compatibility. The active home route uses the RPG map.</p>
+    <router-link to="/">Open Map</router-link>
+  </section>
 </template>
 
 <style scoped>
-.home ul { list-style:none; padding:0 }
-.home li { margin: 12px 0 }
+.home {
+  display: grid;
+  gap: 12px;
+}
 </style>

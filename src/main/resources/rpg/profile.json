@@ -1,0 +1,30 @@
+{
+  "id": "seewhy",
+  "name": "SeeWhy",
+  "title": "Java & AI Application Engineer",
+  "role": "The Wayfinder / 寻路者",
+  "location": "China",
+  "summary": "专注 Java 后端、Spring Boot、Spring AI 与 Agent 工程落地，正在把 sy-ai-agent 打造成可体验、可解释、可评估的 AI 工程作品集。",
+  "focusAreas": [
+    "Java 后端架构",
+    "Spring AI 应用开发",
+    "Agent / RAG / Tool Calling",
+    "Eval、Trace 与 Guardrails",
+    "全栈产品化展示"
+  ],
+  "strengths": [
+    "能把复杂 AI 能力拆成清晰的后端边界",
+    "重视可测试、可观察和可演示的工程闭环",
+    "兼顾产品体验、系统架构和代码可维护性"
+  ],
+  "links": {
+    "github": "",
+    "blog": "",
+    "email": ""
+  },
+  "stats": {
+    "backend": "Spring Boot 3.4 + Java 21",
+    "ai": "Spring AI + DeepSeek",
+    "portfolio": "Wayfinder Guild"
+  }
+}

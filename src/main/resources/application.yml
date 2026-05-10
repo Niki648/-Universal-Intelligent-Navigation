@@ -62,3 +62,13 @@ pexels:
 logging:
   level:
     org.springframework.ai: DEBUG
+
+wayfinder:
+  demo:
+    enabled: ${WAYFINDER_DEMO_ENABLED:false}
+
+travel:
+  rag:
+    # Public production default avoids PgVector/cloud database cost.
+    # Supported values: demo, lightweight, pgvector.
+    mode: ${TRAVEL_RAG_MODE:demo}

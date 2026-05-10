@@ -6,10 +6,10 @@ This backend upgrades the travel planner from a single prompt chat flow into a l
 
 `POST /api/travel/plan`
 
-1. `TravelController`
+1. `WayfinderTravelController`
    - Handles HTTP protocol, validation, and chat id normalization.
-   - Delegates to `TravelMaster`.
-2. `TravelMaster`
+   - Delegates to `WayfinderTravelFacade`.
+2. `WayfinderTravelFacade`
    - Compatibility facade for existing travel capabilities.
    - Routes structured planning to `TravelOrchestratorService`.
 3. `TravelOrchestratorService`
@@ -113,7 +113,7 @@ Current trace steps include:
 ## Design Boundaries
 
 - Controllers only handle protocol and request/response mapping.
-- `TravelMaster` remains the compatibility facade.
+- `WayfinderTravelFacade` remains the compatibility facade.
 - Orchestration is lightweight service composition, not a heavy multi-agent framework.
 - Prompts, skills, and eval cases stay configurable where practical.
 - No real API keys are committed.

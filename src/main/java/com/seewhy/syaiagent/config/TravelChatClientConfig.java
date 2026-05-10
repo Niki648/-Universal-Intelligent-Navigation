@@ -1,7 +1,7 @@
 package com.seewhy.syaiagent.config;
 
 import com.seewhy.syaiagent.advisor.MyLoggerAdvisor;
-import com.seewhy.syaiagent.constant.TravelPromptConstant;
+import com.seewhy.syaiagent.constant.WayfinderPromptConstant;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -25,14 +25,14 @@ public class TravelChatClientConfig {
                 .build();
 
         ChatClient chatClient = ChatClient.builder(chatModel)
-                .defaultSystem(TravelPromptConstant.SYSTEM_PROMPT)
+                .defaultSystem(WayfinderPromptConstant.SYSTEM_PROMPT)
                 .defaultAdvisors(
                         MessageChatMemoryAdvisor.builder(chatMemory).build(),
                         new MyLoggerAdvisor()
                 )
                 .build();
 
-        log.info("寰宇智导旅行规划 ChatClient 已初始化完成");
+        log.info("Wayfinder Travel Agent ChatClient initialized");
         return chatClient;
     }
 }
