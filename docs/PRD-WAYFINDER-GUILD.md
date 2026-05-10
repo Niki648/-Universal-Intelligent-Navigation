@@ -2,7 +2,7 @@
 
 ## 1. Project Background
 
-Wayfinder Guild is the portfolio product layer for `sy-ai-agent`.
+Wayfinder Guild is the public portfolio product, with `wayfinder-guild` used for build and package-facing names.
 
 The project started as an Agentic Travel Planning Backend built with Spring Boot, Java 21, Spring AI, and DeepSeek. It has grown into a productized AI engineering showcase that demonstrates Agent orchestration, RAG, Skills, Eval, Trace, Guardrails, and deployment readiness through a warm cosmic travel RPG experience.
 

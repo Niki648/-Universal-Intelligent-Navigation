@@ -1,45 +1,56 @@
 [
   {
-    "id": "sy-ai-agent",
-    "name": "sy-ai-agent",
-    "subtitle": "Agentic Travel Backend with Spring AI",
-    "description": "基于 Spring Boot 3.4、Java 21、Spring AI 与 DeepSeek 的旅行规划 Agent 后端，覆盖结构化规划、RAG、Skills、Eval、Trace 与 Guardrails。",
+    "id": "wayfinder-guild",
+    "name": "Wayfinder Guild",
+    "subtitle": "Agentic travel portfolio with Spring AI",
+    "description": "Wayfinder Guild is the public portfolio product for the Spring Boot, Java 21, Spring AI, DeepSeek, Vue, and Phaser travel-agent showcase.",
     "areaId": "travel-cabin",
-    "tags": ["Java 21", "Spring Boot", "Spring AI", "Agent", "RAG"],
+    "tags": ["Java 21", "Spring Boot", "Spring AI", "Agent", "RAG", "Portfolio"],
     "highlights": [
-      "WayfinderTravelController 保持 API 边界清晰，WayfinderTravelFacade 保留兼容门面",
-      "旅行规划拆分为 Chat、Report、RAG、Tool、MCP 与 SSE 生命周期服务",
-      "新增 Skills、结构化 TravelPlan、Eval Harness、Guardrails 与 Agent Trace"
+      "WayfinderTravelController keeps the HTTP boundary thin while WayfinderTravelFacade preserves compatibility.",
+      "Travel planning is split across chat, report, RAG, tool, MCP, and SSE services.",
+      "Skills, structured TravelPlan output, Eval Harness, Guardrails, and Agent Trace are visible as product capabilities.",
+      "RPG metadata powers the public Wayfinder Guild map and capability pages."
     ],
-    "moduleIds": ["agentic-travel-backend", "travel-agent", "skills-system", "eval-harness", "agent-trace"],
+    "moduleIds": [
+      "agentic-travel-backend",
+      "travel-agent",
+      "structured-plan",
+      "skills-system",
+      "rag-memory",
+      "guarded-tools",
+      "eval-harness",
+      "agent-trace",
+      "rpg-portfolio-backend"
+    ],
     "links": []
   },
   {
     "id": "symanus-tool-agent",
     "name": "SyManus Tool Agent",
     "subtitle": "Tool-using AI engineer assistant",
-    "description": "围绕工具调用、执行边界和流式反馈构建的工具型 Agent 原型，用来展示 Agent 如何与搜索、文件、终端和下载能力协作。",
+    "description": "A tool-calling agent prototype that demonstrates search, files, terminal boundaries, downloads, streaming feedback, and guardrails.",
     "areaId": "tool-workshop",
     "tags": ["Tool Calling", "ReAct", "SSE", "Guardrails"],
     "highlights": [
-      "封装工具能力并通过测试保护关键行为",
-      "通过 GuardedTool 降低越权和高风险调用",
-      "保留多轮上下文，支持长任务执行体验"
+      "Encapsulates tool capabilities behind tested service boundaries.",
+      "Uses guarded tools to reduce unsafe or unauthorized actions.",
+      "Keeps multi-turn context for longer tool-assisted tasks."
     ],
     "moduleIds": ["tool-agent", "guarded-tools"],
     "links": []
   },
   {
-    "id": "wayfinder-guild",
-    "name": "Wayfinder Guild",
-    "subtitle": "RPG Portfolio Backend Foundation",
-    "description": "面向求职展示和产品体验的 RPG 风格 AI 工程师个人站后端基础，为地图、NPC、技能、项目和角色面板提供静态元数据 API。",
+    "id": "wayfinder-guild-metadata",
+    "name": "Wayfinder Guild Metadata",
+    "subtitle": "Portfolio metadata foundation",
+    "description": "The metadata layer behind the Wayfinder Guild map, NPCs, capability pages, project cards, skills, modules, and profile panel.",
     "areaId": "starlit-square",
-    "tags": ["Portfolio", "RPG Metadata", "API Design", "Product Experience"],
+    "tags": ["Portfolio", "Metadata", "API Design", "Product Experience"],
     "highlights": [
-      "使用 JSON 配置表达小镇地图、NPC、技能和项目",
-      "Controller 仅做协议转发，Service 负责资源加载与查询",
-      "为后续 Vue/Phaser 地图渲染预留稳定 API"
+      "Uses JSON resources to describe the explorable portfolio town.",
+      "Keeps controllers focused on protocol handling while services load and query resources.",
+      "Provides stable metadata for Vue and Phaser rendering."
     ],
     "moduleIds": ["rpg-portfolio-backend"],
     "links": []

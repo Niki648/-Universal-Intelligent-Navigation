@@ -66,7 +66,7 @@ const FALLBACK_PROFILE = {
   title: 'Java & AI Application Engineer',
   role: 'The Wayfinder',
   location: 'China',
-  summary: 'A backend-oriented AI application engineer building sy-ai-agent into a runnable Agent engineering portfolio.',
+  summary: 'A backend-oriented AI application engineer building Wayfinder Guild into a runnable Agent engineering portfolio.',
   focusAreas: ['Java Backend', 'Spring AI', 'Agent Workflows', 'RAG', 'Eval', 'Trace', 'Guardrails'],
   strengths: [
     'Turns complex AI capabilities into clear backend service boundaries.',

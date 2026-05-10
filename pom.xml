@@ -9,9 +9,9 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.SeeWhy</groupId>
-    <artifactId>sy-ai-agent</artifactId>
+    <artifactId>wayfinder-guild</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>sy-ai-agent</name>
+    <name>Wayfinder Guild</name>
     <description>Wayfinder Guild · 基于 Spring AI 的旅行规划、RPG 作品集与 SyManus 智能体系统（RAG、ReAct 工具调用、流式对话）</description>
 
     <properties>

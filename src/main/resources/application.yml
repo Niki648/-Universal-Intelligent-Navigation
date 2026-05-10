@@ -1,6 +1,6 @@
 spring:
   application:
-    name: sy-ai-agent
+    name: wayfinder-guild
   profiles:
     active: local
 

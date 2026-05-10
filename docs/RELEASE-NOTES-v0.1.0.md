@@ -86,12 +86,12 @@ Mode strategy:
 
 Backend rollback:
 
-1. Keep the previous JAR as `/opt/wayfinder/sy-ai-agent.previous.jar`.
+1. Keep the previous JAR as `/opt/wayfinder/wayfinder-guild.previous.jar`.
 2. Replace the active JAR.
 3. Restart systemd service.
 
 ```bash
-sudo cp /opt/wayfinder/sy-ai-agent.previous.jar /opt/wayfinder/sy-ai-agent.jar
+sudo cp /opt/wayfinder/wayfinder-guild.previous.jar /opt/wayfinder/wayfinder-guild.jar
 sudo systemctl restart wayfinder
 ```
 

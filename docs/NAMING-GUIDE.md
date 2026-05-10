@@ -15,7 +15,10 @@ These names are intentionally retained for compatibility or domain clarity:
 - `Travel*`: travel-domain models and services, such as `TravelPlan`, `TravelRagService`, and `TravelEvalHarness`.
 - `SyManus`: the tool-calling Agent.
 - `/api/travel/**`: compatibility API surface. Do not rename it in this phase.
-- Maven `artifactId`: keep `sy-ai-agent` for now.
+- Maven `artifactId`: `wayfinder-guild`.
+- Maven `<name>`: `Wayfinder Guild`.
+- Spring `application.name`: `wayfinder-guild`.
+- Frontend package name: `wayfinder-guild-frontend`.
 - Java package: keep `com.seewhy.syaiagent` for now.
 
 ## Recommended Names

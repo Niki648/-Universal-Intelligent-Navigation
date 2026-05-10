@@ -1,6 +1,6 @@
 # Wayfinder CLI
 
-Rust developer tooling for static quality checks in the Wayfinder Guild / sy-ai-agent project.
+Rust developer tooling for static quality checks in the Wayfinder Guild project.
 
 The CLI validates portfolio and Agent metadata before a demo or deployment:
 

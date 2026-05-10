@@ -42,9 +42,8 @@ import TagList from '../components/common/TagList.vue'
 import StateBlock from '../components/common/StateBlock.vue'
 
 const PROJECT_FALLBACKS = {
-  'sy-ai-agent': { rpgName: 'Travel Cabin Core', rarity: 'Epic', demoRoute: '/travel-agent' },
+  'wayfinder-guild': { rpgName: 'Travel Cabin Core', rarity: 'Legendary', demoRoute: '/travel-agent' },
   'symanus-tool-agent': { rpgName: 'Tool Workshop Engine', rarity: 'Rare', demoRoute: '/manus-agent' },
-  'wayfinder-guild': { rpgName: 'Guild Map System', rarity: 'Legendary', demoRoute: '/' }
 }
 
 const FALLBACK_PROJECTS = [

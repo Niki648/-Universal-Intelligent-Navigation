@@ -8,7 +8,7 @@ Skipped: `node_modules`, `dist`, `target`, `private-docs`, `.git`, and generated
 
 ## Summary
 
-- The public product name is mostly normalized to `Wayfinder Guild` / `Wayfinder`.
+- The public product name is normalized to `Wayfinder Guild` / `Wayfinder`, with machine names using `wayfinder-guild`.
 - No active non-governance source or frontend file currently contains `寰宇智导`.
 - The old boundary names `TravelMaster`, `TravelController`, and `TravelPromptConstant` are gone from active Java source after the earlier rename. Remaining mentions are either new `Wayfinder*` names or IDE workspace history.
 - `Rpg*` remains the largest consistency topic. It is accepted for now as an implementation/API vocabulary, but future product metadata should migrate toward `Wayfinder`, `Guild`, or `Portfolio` terminology.
@@ -26,12 +26,15 @@ Skipped: `node_modules`, `dist`, `target`, `private-docs`, `.git`, and generated
 - `RpgController`, `Rpg*` Java models/services, `/api/rpg/**`, `src/main/resources/rpg`, and `src/main/resources/prompts/rpg` mix implementation vocabulary with product vocabulary. Keep for this phase; consider a later compatibility-aware migration to `Portfolio` or `Guild` naming.
 - `RpgHome.vue` is an accepted short-term exception because the active home route still represents the map-style experience. A later rename to `WayfinderHomePage.vue` or `GuildMapPage.vue` would improve consistency.
 - `Home.vue` is a legacy compatibility page. It should be confirmed unused before removal or renamed to `LegacyHome.vue`.
-- RPG JSON metadata contains product-facing labels such as `RPG Portfolio Backend`. Prefer `Wayfinder Portfolio Backend` or `Guild Portfolio Backend` in a later content pass.
+- RPG JSON metadata now uses `wayfinder-guild` for the public project id and `Wayfinder Portfolio Backend` for the metadata module label.
 - The CLI command set still includes `lint-rpg`. Keep it for compatibility now; a later alias such as `lint-portfolio` would better match the product vocabulary.
 
 ## P2: Deferred / Historical
 
-- Maven `artifactId` remains `sy-ai-agent`.
+- Maven `artifactId` is `wayfinder-guild`.
+- Maven `<name>` is `Wayfinder Guild`.
+- Spring `application.name` is `wayfinder-guild`.
+- Frontend package name is `wayfinder-guild-frontend`.
 - Java package remains `com.seewhy.syaiagent`.
 - Repository root remains `sy-ai-agent`.
 - `/api/travel/**` remains the compatibility API.

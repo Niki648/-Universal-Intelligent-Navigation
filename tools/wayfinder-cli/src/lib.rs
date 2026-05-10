@@ -367,6 +367,7 @@ pub fn lint_naming(workspace: &Path) -> Result<CheckReport> {
 
     check_doc_file_names(&mut report, workspace);
     check_vue_page_names(&mut report, workspace);
+    check_public_project_names(&mut report, workspace)?;
     Ok(report)
 }
 
@@ -432,6 +433,9 @@ fn check_doc_file_names(report: &mut CheckReport, workspace: &Path) {
             .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or("");
+        if is_release_notes_version_file(name) {
+            continue;
+        }
         if !is_upper_kebab_markdown(name) {
             report.warn(format!("{} should use UPPER-KEBAB-CASE.md", display(path)));
         }
@@ -468,6 +472,79 @@ fn check_vue_page_names(report: &mut CheckReport, workspace: &Path) {
             ));
         }
     }
+}
+
+fn check_public_project_names(report: &mut CheckReport, workspace: &Path) -> Result<()> {
+    let files = [
+        (
+            "pom.xml",
+            vec![
+                "<artifactId>wayfinder-guild</artifactId>",
+                "<name>Wayfinder Guild</name>",
+            ],
+            vec![
+                "<artifactId>sy-ai-agent</artifactId>",
+                "<name>sy-ai-agent</name>",
+            ],
+        ),
+        (
+            "src/main/resources/application.yml",
+            vec!["name: wayfinder-guild"],
+            vec!["name: sy-ai-agent"],
+        ),
+        (
+            "frontend/package.json",
+            vec!["\"name\": \"wayfinder-guild-frontend\""],
+            vec!["\"name\": \"syai-frontend\""],
+        ),
+        (
+            "frontend/package-lock.json",
+            vec!["\"name\": \"wayfinder-guild-frontend\""],
+            vec!["\"name\": \"syai-frontend\""],
+        ),
+        (
+            "frontend/index.html",
+            vec!["<title>Wayfinder Guild</title>"],
+            vec!["SY AI Frontend"],
+        ),
+        (
+            "src/main/resources/rpg/projects.json",
+            vec![
+                "\"id\": \"wayfinder-guild\"",
+                "\"name\": \"Wayfinder Guild\"",
+            ],
+            vec!["\"id\": \"sy-ai-agent\"", "\"name\": \"sy-ai-agent\""],
+        ),
+    ];
+
+    for (relative, required_terms, forbidden_terms) in files {
+        let path = workspace.join(relative);
+        if !path.exists() {
+            continue;
+        }
+        let content =
+            fs::read_to_string(&path).with_context(|| format!("reading {}", display(&path)))?;
+        for term in required_terms {
+            if !content.contains(term) {
+                report.error(format!(
+                    "{} missing required public naming `{}`",
+                    display(&path),
+                    term
+                ));
+            }
+        }
+        for term in forbidden_terms {
+            if content.contains(term) {
+                report.error(format!(
+                    "{} contains legacy public naming `{}`",
+                    display(&path),
+                    term
+                ));
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn check_json_ids(report: &mut CheckReport, path: &Path, value: &Value) {
@@ -724,6 +801,25 @@ fn is_upper_kebab_markdown(name: &str) -> bool {
         .all(|ch| ch.is_ascii_uppercase() || ch.is_ascii_digit() || ch == '-')
 }
 
+fn is_release_notes_version_file(name: &str) -> bool {
+    let Some(version) = name
+        .strip_prefix("RELEASE-NOTES-v")
+        .and_then(|value| value.strip_suffix(".md"))
+    else {
+        return false;
+    };
+    let mut parts = version.split('.');
+    matches!(
+        (parts.next(), parts.next(), parts.next(), parts.next()),
+        (Some(major), Some(minor), Some(patch), None)
+            if is_ascii_digits(major) && is_ascii_digits(minor) && is_ascii_digits(patch)
+    )
+}
+
+fn is_ascii_digits(value: &str) -> bool {
+    !value.is_empty() && value.chars().all(|ch| ch.is_ascii_digit())
+}
+
 fn contains_deprecated_term(line: &str, term: &str) -> bool {
     if term == "寰宇智导" {
         return line.contains(term);
@@ -897,6 +993,25 @@ priority: 90
             .warnings
             .iter()
             .any(|warning| warning.contains("*Page.vue")));
+        Ok(())
+    }
+
+    #[test]
+    fn lint_naming_rejects_legacy_public_project_contracts() -> Result<()> {
+        let dir = tempdir()?;
+        let frontend_dir = dir.path().join("frontend");
+        create_dir_all(&frontend_dir)?;
+        write(
+            frontend_dir.join("package.json"),
+            r#"{ "name": "syai-frontend" }"#,
+        )?;
+
+        let report = lint_naming(dir.path())?;
+        assert!(!report.is_ok());
+        assert!(report
+            .errors
+            .iter()
+            .any(|error| error.contains("legacy public naming")));
         Ok(())
     }
 }
