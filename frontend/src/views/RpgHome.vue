@@ -24,14 +24,13 @@
     <div class="map-shell">
       <div ref="gameContainer" class="game-container"></div>
       <aside class="area-card">
-        <p class="area-kicker">Current Landmark</p>
-        <h2>{{ activeArea?.nameEn || 'Starlit Square' }}</h2>
-        <h3>{{ activeArea?.nameZh || fallbackAreaName }}</h3>
+        <p class="area-kicker">当前地标</p>
+        <h2>{{ activeArea?.nameZh || fallbackAreaName }}</h2>
         <p>
           {{ activeArea?.description || fallbackAreaDescription }}
         </p>
         <button v-if="activeArea" type="button" @click="enterArea">
-          Press E / &#25353; E &#36827;&#20837;
+          按 E 进入
         </button>
       </aside>
     </div>

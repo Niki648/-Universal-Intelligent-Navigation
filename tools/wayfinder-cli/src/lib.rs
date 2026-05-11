@@ -13,6 +13,7 @@ pub enum Command {
     LintRpg { workspace: PathBuf },
     LintEvals { workspace: PathBuf },
     LintPrompts { workspace: PathBuf },
+    LintRagDocs { workspace: PathBuf },
     LintNaming { workspace: PathBuf },
     Summary { workspace: PathBuf },
 }
@@ -58,6 +59,7 @@ pub struct Summary {
     pub rpg_modules: usize,
     pub eval_cases: usize,
     pub prompt_templates: usize,
+    pub rag_docs: usize,
 }
 
 pub fn run_command(command: Command) -> Result<()> {
@@ -68,6 +70,7 @@ pub fn run_command(command: Command) -> Result<()> {
                 lint_rpg(&workspace)?,
                 lint_evals(&workspace)?,
                 lint_prompts(&workspace)?,
+                lint_rag_docs(&workspace)?,
                 lint_naming(&workspace)?,
             ];
             print_reports(&reports);
@@ -91,6 +94,11 @@ pub fn run_command(command: Command) -> Result<()> {
         }
         Command::LintPrompts { workspace } => {
             let report = lint_prompts(&workspace)?;
+            print_reports(&[report.clone()]);
+            fail_on_errors(&[report])
+        }
+        Command::LintRagDocs { workspace } => {
+            let report = lint_rag_docs(&workspace)?;
             print_reports(&[report.clone()]);
             fail_on_errors(&[report])
         }
@@ -326,6 +334,85 @@ pub fn lint_prompts(workspace: &Path) -> Result<CheckReport> {
 
     if report.checked == 0 {
         report.warn("no RPG prompt templates found");
+    }
+    Ok(report)
+}
+
+pub fn lint_rag_docs(workspace: &Path) -> Result<CheckReport> {
+    let docs_root = workspace.join("src/main/resources/document");
+    let mut report = CheckReport::ok("rag docs", 0);
+    if !docs_root.exists() {
+        report.error(format!("missing directory {}", display(&docs_root)));
+        return Ok(report);
+    }
+
+    for entry in WalkDir::new(&docs_root)
+        .max_depth(1)
+        .into_iter()
+        .filter_entry(|entry| !is_skipped_path(entry.path()))
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_type().is_file())
+        .filter(|entry| entry.path().extension().and_then(|ext| ext.to_str()) == Some("md"))
+    {
+        report.checked += 1;
+        let path = entry.path();
+        let content =
+            fs::read_to_string(path).with_context(|| format!("reading {}", display(path)))?;
+        let Some(front_matter) = front_matter(&content) else {
+            report.error(format!("{} missing YAML front matter", display(path)));
+            continue;
+        };
+        let fields = parse_front_matter(front_matter);
+        for key in ["id", "title", "tags", "updated", "source_type"] {
+            if fields
+                .get(key)
+                .map(|value| value.trim().is_empty())
+                .unwrap_or(true)
+            {
+                report.error(format!(
+                    "{} missing required field `{}`",
+                    display(path),
+                    key
+                ));
+            }
+        }
+
+        let stem = path
+            .file_stem()
+            .and_then(|name| name.to_str())
+            .unwrap_or("");
+        if let Some(id) = fields.get("id") {
+            if id.trim() != stem {
+                report.error(format!(
+                    "{} document id `{}` does not match filename `{}`",
+                    display(path),
+                    id.trim(),
+                    stem
+                ));
+            }
+        }
+        if let Some(tags) = fields.get("tags") {
+            let tag_count = split_tags(tags).len();
+            if tag_count == 0 {
+                report.error(format!("{} tags must not be empty", display(path)));
+            }
+        }
+        if let Some(source_type) = fields.get("source_type") {
+            if !matches!(source_type.trim(), "curated-demo" | "local-note") {
+                report.error(format!(
+                    "{} source_type must be curated-demo or local-note",
+                    display(path)
+                ));
+            }
+        }
+        let body = markdown_body(&content);
+        if body.chars().filter(|ch| !ch.is_whitespace()).count() < 180 {
+            report.error(format!("{} document body is too short", display(path)));
+        }
+    }
+
+    if report.checked == 0 {
+        report.error("no Markdown files found under src/main/resources/document/*.md");
     }
     Ok(report)
 }
@@ -605,6 +692,15 @@ pub fn collect_summary(workspace: &Path) -> Result<Summary> {
         .filter(|entry| entry.path().extension().and_then(|ext| ext.to_str()) == Some("st"))
         .count();
 
+    let rag_doc_count = WalkDir::new(workspace.join("src/main/resources/document"))
+        .max_depth(1)
+        .into_iter()
+        .filter_entry(|entry| !is_skipped_path(entry.path()))
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_type().is_file())
+        .filter(|entry| entry.path().extension().and_then(|ext| ext.to_str()) == Some("md"))
+        .count();
+
     Ok(Summary {
         skills: skills_count,
         rpg_areas: array_len(world.get("areas")),
@@ -614,6 +710,7 @@ pub fn collect_summary(workspace: &Path) -> Result<Summary> {
         rpg_modules: array_len(Some(&modules)),
         eval_cases: array_len(Some(&evals)),
         prompt_templates: prompt_count,
+        rag_docs: rag_doc_count,
     })
 }
 
@@ -651,6 +748,7 @@ fn print_summary(summary: &Summary) {
     println!("rpg modules: {}", summary.rpg_modules);
     println!("eval cases: {}", summary.eval_cases);
     println!("prompt templates: {}", summary.prompt_templates);
+    println!("rag docs: {}", summary.rag_docs);
 }
 
 fn fail_on_errors(reports: &[CheckReport]) -> Result<()> {
@@ -695,6 +793,33 @@ fn parse_front_matter(front_matter: &str) -> BTreeMap<String, String> {
         }
     }
     fields
+}
+
+fn markdown_body(content: &str) -> &str {
+    let Some(rest) = content.strip_prefix("---") else {
+        return content;
+    };
+    let Some(rest) = rest
+        .strip_prefix("\r\n")
+        .or_else(|| rest.strip_prefix('\n'))
+    else {
+        return content;
+    };
+    rest.split_once("\n---")
+        .map(|(_, body)| body)
+        .or_else(|| rest.split_once("\r\n---").map(|(_, body)| body))
+        .unwrap_or(content)
+}
+
+fn split_tags(value: &str) -> Vec<String> {
+    value
+        .trim()
+        .trim_start_matches('[')
+        .trim_end_matches(']')
+        .split(',')
+        .map(|tag| tag.trim().trim_matches('"').to_string())
+        .filter(|tag| !tag.is_empty())
+        .collect()
 }
 
 fn require_string(report: &mut CheckReport, file: &str, value: &Value, field: &str) {
@@ -942,6 +1067,72 @@ priority: 90
             .errors
             .iter()
             .any(|error| error.contains("unbalanced")));
+        Ok(())
+    }
+
+    #[test]
+    fn lint_rag_docs_accepts_valid_curated_markdown() -> Result<()> {
+        let dir = tempdir()?;
+        let docs_dir = dir.path().join("src/main/resources/document");
+        create_dir_all(&docs_dir)?;
+        write(
+            docs_dir.join("rainy-day-backup-plan.md"),
+            format!(
+                r#"---
+id: rainy-day-backup-plan
+title: Rainy Day Backup Plan
+tags: rain, backup
+updated: 2026-05-10
+source_type: curated-demo
+---
+
+## Guidance
+
+{}
+"#,
+                "A useful travel knowledge body with planning guidance. ".repeat(12)
+            ),
+        )?;
+
+        let report = lint_rag_docs(dir.path())?;
+        assert!(report.is_ok(), "{:?}", report.errors);
+        assert_eq!(report.checked, 1);
+        Ok(())
+    }
+
+    #[test]
+    fn lint_rag_docs_rejects_missing_metadata() -> Result<()> {
+        let dir = tempdir()?;
+        let docs_dir = dir.path().join("src/main/resources/document");
+        create_dir_all(&docs_dir)?;
+        write(
+            docs_dir.join("bad-doc.md"),
+            r#"---
+id: other-id
+title: Bad Doc
+tags:
+updated: 2026-05-10
+source_type: remote
+---
+
+Short.
+"#,
+        )?;
+
+        let report = lint_rag_docs(dir.path())?;
+        assert!(!report.is_ok());
+        assert!(report
+            .errors
+            .iter()
+            .any(|error| error.contains("does not match filename")));
+        assert!(report
+            .errors
+            .iter()
+            .any(|error| error.contains("source_type")));
+        assert!(report
+            .errors
+            .iter()
+            .any(|error| error.contains("too short")));
         Ok(())
     }
 

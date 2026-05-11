@@ -8,6 +8,7 @@ The CLI validates portfolio and Agent metadata before a demo or deployment:
 - RPG metadata under `src/main/resources/rpg/*.json`
 - eval cases under `evals/travel-cases.json`
 - RPG prompt templates under `src/main/resources/prompts/rpg/*.st`
+- RAG documents under `src/main/resources/document/*.md`
 - naming governance for Wayfinder Guild branding and file conventions
 
 ## Install / Build
@@ -62,6 +63,12 @@ Validate prompt templates:
 cargo run -- lint-prompts --workspace ..\..
 ```
 
+Validate RAG documents:
+
+```powershell
+cargo run -- lint-rag-docs --workspace ..\..
+```
+
 Validate naming governance:
 
 ```powershell
@@ -98,6 +105,15 @@ cargo run -- summary --workspace ..\..
 
 - `.st` templates are not empty
 - placeholder angle brackets are basically balanced
+
+`lint-rag-docs`
+
+- Markdown files exist under `src/main/resources/document/*.md`
+- each file has YAML front matter with `id`, `title`, `tags`, `updated`, and `source_type`
+- document `id` matches the filename stem
+- `tags` is non-empty
+- `source_type` is `curated-demo` or `local-note`
+- body content is long enough to be useful for retrieval
 
 `lint-naming`
 

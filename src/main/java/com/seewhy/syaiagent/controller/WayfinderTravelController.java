@@ -4,6 +4,9 @@ import com.seewhy.syaiagent.agent.SyManus;
 import com.seewhy.syaiagent.app.WayfinderTravelFacade;
 import com.seewhy.syaiagent.model.ChatRequest;
 import com.seewhy.syaiagent.model.ChatResponse;
+import com.seewhy.syaiagent.model.DemoToolRequest;
+import com.seewhy.syaiagent.model.DemoToolResponse;
+import com.seewhy.syaiagent.model.DemoArtifactResponse;
 import com.seewhy.syaiagent.model.HealthResponse;
 import com.seewhy.syaiagent.model.QuickRequest;
 import com.seewhy.syaiagent.model.RagExplainRequest;
@@ -11,23 +14,34 @@ import com.seewhy.syaiagent.model.RagExplainResponse;
 import com.seewhy.syaiagent.model.TravelPlan;
 import com.seewhy.syaiagent.model.TravelPlanRequest;
 import com.seewhy.syaiagent.model.TravelReport;
+import com.seewhy.syaiagent.service.DemoArtifactService;
 import com.seewhy.syaiagent.service.SseEmitterStreamService;
+import com.seewhy.syaiagent.service.SyManusArtifactLinkService;
+import com.seewhy.syaiagent.service.SyManusDemoToolService;
 import com.seewhy.syaiagent.service.TravelRagService;
 import com.seewhy.syaiagent.service.WayfinderDemoService;
 import com.seewhy.syaiagent.trace.AgentTraceEvent;
 import com.seewhy.syaiagent.trace.AgentTraceService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
 import reactor.core.publisher.Flux;
 
+import org.springframework.http.HttpStatus;
 import java.util.List;
 import java.util.UUID;
 
@@ -49,6 +63,10 @@ public class WayfinderTravelController {
     private final AgentTraceService agentTraceService;
     private final TravelRagService travelRagService;
     private final WayfinderDemoService wayfinderDemoService;
+    private final DemoArtifactService demoArtifactService;
+    private final SyManusDemoToolService syManusDemoToolService;
+    private final SyManusArtifactLinkService syManusArtifactLinkService;
+    private final ObjectMapper objectMapper;
 
     public WayfinderTravelController(WayfinderTravelFacade wayfinderTravelFacade,
                                      ToolCallback[] allTools,
@@ -57,7 +75,11 @@ public class WayfinderTravelController {
                                      SseEmitterStreamService sseEmitterStreamService,
                                      AgentTraceService agentTraceService,
                                      TravelRagService travelRagService,
-                                     WayfinderDemoService wayfinderDemoService) {
+                                     WayfinderDemoService wayfinderDemoService,
+                                     DemoArtifactService demoArtifactService,
+                                     SyManusDemoToolService syManusDemoToolService,
+                                     SyManusArtifactLinkService syManusArtifactLinkService,
+                                     ObjectMapper objectMapper) {
         this.wayfinderTravelFacade = wayfinderTravelFacade;
         this.allTools = allTools;
         this.chatModel = chatModel;
@@ -66,6 +88,10 @@ public class WayfinderTravelController {
         this.agentTraceService = agentTraceService;
         this.travelRagService = travelRagService;
         this.wayfinderDemoService = wayfinderDemoService;
+        this.demoArtifactService = demoArtifactService;
+        this.syManusDemoToolService = syManusDemoToolService;
+        this.syManusArtifactLinkService = syManusArtifactLinkService;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -132,10 +158,29 @@ public class WayfinderTravelController {
                                       @RequestParam(required = false) String chatId) {
         validateMessage(message);
         String id = normalizeChatId(chatId);
-        SyManus agent = new SyManus(allTools, chatModel);
+        SyManus agent = new SyManus(allTools, chatModel, syManusArtifactLinkService);
         agent.setConversationChatId(id);
         agent.setConversationChatMemory(manusChatMemory);
+        agent.setArtifactMarkerFormatter(this::formatManusArtifactMarker);
         return agent.runStream(message);
+    }
+
+    @PostMapping("/manus/demo-tool")
+    public DemoToolResponse runManusDemoTool(@RequestBody DemoToolRequest request) {
+        if (request == null || request.type() == null || request.type().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Demo tool type is required.");
+        }
+        return syManusDemoToolService.runDemo(request.type());
+    }
+
+    @GetMapping("/manus/artifacts/{artifactId}")
+    public ResponseEntity<Resource> previewManusArtifact(@PathVariable String artifactId) {
+        return artifactResponse(artifactId, false);
+    }
+
+    @GetMapping("/manus/artifacts/{artifactId}/download")
+    public ResponseEntity<Resource> downloadManusArtifact(@PathVariable String artifactId) {
+        return artifactResponse(artifactId, true);
     }
 
     /**
@@ -234,6 +279,34 @@ public class WayfinderTravelController {
     private SseEmitter createChatEmitter(String message, String chatId, String logName) {
         String id = normalizeChatId(chatId);
         return sseEmitterStreamService.stream(id, logName, wayfinderTravelFacade.doChatByStream(message, id));
+    }
+
+    private ResponseEntity<Resource> artifactResponse(String artifactId, boolean attachment) {
+        try {
+            DemoArtifactService.ArtifactResource artifact = demoArtifactService.resolve(artifactId);
+            ContentDisposition disposition = (attachment ? ContentDisposition.attachment() : ContentDisposition.inline())
+                    .filename(artifact.fileName())
+                    .build();
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(artifact.mimeType()))
+                    .contentLength(artifact.size())
+                    .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .body(artifact.resource());
+        } catch (SecurityException e) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, e.getMessage(), e);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
+        }
+    }
+
+    private String formatManusArtifactMarker(DemoArtifactResponse artifact) {
+        try {
+            return "[ARTIFACT]" + objectMapper.writeValueAsString(artifact) + "[/ARTIFACT]";
+        } catch (JsonProcessingException e) {
+            log.debug("Could not serialize artifact marker for {}: {}", artifact.fileName(), e.getMessage());
+            return "";
+        }
     }
 
     private void validateMessage(String message) {

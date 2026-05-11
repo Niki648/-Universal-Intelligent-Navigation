@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 /**
  * 抽象基础代理类，用于管理代理状态和执行流程。
@@ -33,6 +34,7 @@ public abstract class BaseAgent {
     // 提示词
     private String systemPrompt;
     private String nextStepPrompt;
+    private String activeUserPrompt;
 
     // 代理状态
     private AgentState state = AgentState.IDLE;
@@ -51,6 +53,7 @@ public abstract class BaseAgent {
     private String conversationChatId;
     /** 对话记忆，与 conversationChatId 一起使用时加载/保存多轮上下文 */
     private ChatMemory conversationChatMemory;
+    private Function<String, String> streamChunkFormatter;
     private static final int MAX_HISTORY_LOAD = 20;
     private static final int MAX_HISTORY_SAVE = 30;
 
@@ -68,6 +71,7 @@ public abstract class BaseAgent {
         if (StrUtil.isBlank(userPrompt)) {
             throw new RuntimeException("Cannot run agent with empty user prompt");
         }
+        this.activeUserPrompt = userPrompt;
         // 2、执行，更改状态
         this.state = AgentState.RUNNING;
         // 若有对话记忆则加载近期历史，再追加当前用户消息
@@ -160,6 +164,7 @@ public abstract class BaseAgent {
                     log.debug("Loaded {} history messages for chatId {}", messageList.size(), conversationChatId);
                 }
             }
+            this.activeUserPrompt = userPrompt;
             messageList.add(new UserMessage(userPrompt));
             // 保存结果列表
             List<String> results = new ArrayList<>();
@@ -173,9 +178,10 @@ public abstract class BaseAgent {
                     String stepResult = step();
                     // 仅在有用户可读内容时才输出，避免把纯“思考完成”等内部状态暴露出去
                     if (StrUtil.isNotBlank(stepResult)) {
-                        results.add(stepResult);
+                        String formattedStepResult = formatStreamChunk(stepResult);
+                        results.add(formattedStepResult);
                         try {
-                            sseEmitter.send(stepResult);
+                            sseEmitter.send(formattedStepResult);
                         } catch (IOException ioe) {
                             log.debug("SSE client disconnected while sending: {}", ioe.getMessage());
                             break;
@@ -233,6 +239,19 @@ public abstract class BaseAgent {
      * @return
      */
     public abstract String step();
+
+    private String formatStreamChunk(String chunk) {
+        if (streamChunkFormatter == null) {
+            return chunk;
+        }
+        try {
+            String formatted = streamChunkFormatter.apply(chunk);
+            return formatted == null ? chunk : formatted;
+        } catch (Exception e) {
+            log.warn("Failed to format stream chunk: {}", e.getMessage());
+            return chunk;
+        }
+    }
 
     /**
      * 规整消息列表，保证发往 API 时满足：每个 role=tool 的消息前必须有带 tool_calls 的 assistant 消息。

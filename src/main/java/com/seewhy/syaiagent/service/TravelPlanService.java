@@ -28,21 +28,35 @@ public class TravelPlanService {
             Return only data that fits the TravelPlan schema.
             Keep estimates explicit as estimates. Do not guarantee visa approval, weather, safety, prices, opening hours, or policy outcomes.
             If important information is missing, still provide a useful draft and list follow-up questions or assumptions in risks/alternatives.
+            Never invent a specific traveler count from broad wording such as "family trip".
+            If traveler count is not specified, set travelers to null and do not say the budget is estimated for 2 people, 3 people, or any other invented count.
+            Budget estimates must be realistic and internally consistent.
+            Do not force the whole user budget to be spent. If the user's budget is generous, estimate realistic expected spend and put remaining money into optional upgrades, reserve, or contingency.
+            Budget item amounts must match their notes. If a note says high-speed rail is about 5500 CNY, the transport item should not be 15000 CNY unless local transfers, taxis, private car, or business-class assumptions are clearly itemized.
+            For China domestic trips, separate intercity transport and local transport when possible.
+            For China domestic trips, keep ordinary rail, local transport, food, hotel, and ticket estimates conservative and recognizable to a local traveler.
+            For ordinary China high-speed rail, use second-class seat planning estimates unless the user explicitly asks for first class, business class, private transfer, or chartered car.
+            For Beijing↔Shanghai ordinary high-speed rail, use a planning estimate around 650 CNY per person per one-way second-class seat.
+            For common short domestic rail pairs such as Shanghai↔Hangzhou, Shanghai↔Suzhou, Beijing↔Tianjin, Chengdu↔Chongqing, Guangzhou↔Shenzhen, and Shanghai↔Nanjing, ordinary second-class rail should usually be hundreds of CNY or less per person per one-way trip, not thousands.
+            Do not double count the same transport cost across intercity rail and local city transport.
             """;
 
     private final ChatClient chatClient;
     private final SkillLoaderService skillLoaderService;
     private final GuardrailService guardrailService;
     private final AgentTraceService agentTraceService;
+    private final BudgetSanityService budgetSanityService;
 
     public TravelPlanService(@Qualifier("travelChatClient") ChatClient chatClient,
                              SkillLoaderService skillLoaderService,
                              GuardrailService guardrailService,
-                             AgentTraceService agentTraceService) {
+                             AgentTraceService agentTraceService,
+                             BudgetSanityService budgetSanityService) {
         this.chatClient = chatClient;
         this.skillLoaderService = skillLoaderService;
         this.guardrailService = guardrailService;
         this.agentTraceService = agentTraceService;
+        this.budgetSanityService = budgetSanityService;
     }
 
     public TravelPlan generatePlan(String message, String chatId) {
@@ -76,9 +90,16 @@ public class TravelPlanService {
                     .entity(TravelPlan.class);
             TravelPlan normalizedPlan = normalizePlan(plan, loadedSkillIds);
             agentTraceService.record(chatId, AgentTraceStep.ITINERARY_GENERATION, AgentTraceStatus.COMPLETED, "Structured itinerary generated.");
-            agentTraceService.record(chatId, AgentTraceStep.BUDGET_CHECK, AgentTraceStatus.COMPLETED, "Budget structure checked.", Map.of("hasBudget", normalizedPlan.budget() != null));
+            BudgetSanityService.AuditResult budgetAudit = budgetSanityService.audit(normalizedPlan);
+            TravelPlan auditedPlan = budgetAudit.plan();
+            agentTraceService.record(chatId, AgentTraceStep.BUDGET_CHECK, AgentTraceStatus.COMPLETED, "Budget structure checked.", Map.of(
+                    "hasBudget", auditedPlan.budget() != null,
+                    "priceAudited", true,
+                    "budgetAdjusted", budgetAudit.adjusted(),
+                    "adjustedItems", budgetAudit.adjustedItems()
+            ));
             agentTraceService.record(chatId, AgentTraceStep.RISK_CHECK, AgentTraceStatus.STARTED, "Applying output guardrails.");
-            TravelPlan guardedPlan = guardrailService.sanitizeTravelPlanOutput(normalizedPlan);
+            TravelPlan guardedPlan = guardrailService.sanitizeTravelPlanOutput(auditedPlan);
             agentTraceService.record(chatId, AgentTraceStep.RISK_CHECK, AgentTraceStatus.COMPLETED, "Risk wording and uncertainty reminders checked.", Map.of("riskCount", guardedPlan.risks().size()));
             return guardedPlan;
         } catch (RuntimeException ex) {
@@ -98,8 +119,13 @@ public class TravelPlanService {
 
                 Output requirements:
                 - summary: concise planning summary.
-                - destination, departure, days, travelers: infer from user request where possible.
+                - destination, departure, days, travelers: extract from user request where explicit; do not invent travelers.
                 - budget: include total, currency, itemized estimates, and uncertainty note.
+                - budget items: keep amount and note consistent; do not force the full user budget to be spent; put unused generous budget into optional upgrades/reserve/contingency.
+                - domestic China transport: separate intercity rail/flight from local transport when practical.
+                - domestic China budget: keep ordinary rail, local transport, food, hotels, and ticket estimates conservative and locally plausible; do not inflate line items to spend the user's full budget.
+                - ordinary China high-speed rail: use second-class seat planning estimates unless business class/private transfer is requested; Beijing↔Shanghai is around 650 CNY per person per one-way seat.
+                - do not double count the same transport cost.
                 - itineraryDays: one object per day where possible.
                 - transportation, accommodation, risks, alternatives: practical arrays for UI cards.
                 - loadedSkills: include the loaded skill ids exactly.

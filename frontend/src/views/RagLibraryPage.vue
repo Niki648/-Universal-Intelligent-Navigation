@@ -4,8 +4,19 @@
     title="Explainable RAG Library"
     subtitle="Ask the travel knowledge base and inspect query rewrite, retrieved documents, and final answer."
   >
+    <div class="demo-question-rail">
+      <button
+        v-for="question in demoQuestions"
+        :key="question"
+        type="button"
+        @click="useDemoQuestion(question)"
+      >
+        {{ question }}
+      </button>
+    </div>
+
     <form class="prompt-form" @submit.prevent="askRag">
-      <textarea v-model="message" rows="4" placeholder="Ask a travel knowledge question..."></textarea>
+      <textarea v-model="message" rows="4" placeholder="问一个旅行知识库问题..."></textarea>
       <button type="submit" :disabled="loading || !message.trim()">{{ loading ? 'Explaining...' : 'Explain RAG Answer' }}</button>
     </form>
 
@@ -52,12 +63,25 @@
     <div v-if="response?.documents?.length" class="card-grid">
       <StarCard
         v-for="(doc, index) in response.documents"
-        :key="`${doc.source}-${index}`"
+        :key="`${doc.documentId || doc.source}-${index}`"
         :title="doc.title || `Document ${index + 1}`"
         :description="doc.snippet"
       >
-        <template #meta>{{ doc.source || 'unknown source' }}</template>
-        <TagList :items="[scoreLabel(doc.score)]" />
+        <template #meta>
+          <span>{{ doc.source || 'unknown source' }}</span>
+          <span v-if="doc.documentId">#{{ doc.documentId }}</span>
+        </template>
+        <dl class="metadata-grid rag-document-meta">
+          <div v-if="doc.updated">
+            <dt>Updated</dt>
+            <dd>{{ doc.updated }}</dd>
+          </div>
+          <div v-if="doc.sourceType">
+            <dt>Source Type</dt>
+            <dd>{{ doc.sourceType }}</dd>
+          </div>
+        </dl>
+        <TagList :items="documentTags(doc)" />
       </StarCard>
     </div>
   </PageShell>
@@ -75,10 +99,17 @@ export default {
   components: { PageShell, StarCard, TagList, StateBlock },
   data() {
     return {
-      message: 'What should I consider for a relaxed family trip to Japan?',
+      message: '我和父母 3 个人 6 月去日本 7 天，预算 2 万，想轻松一点，怎么安排？',
       response: null,
       loading: false,
-      error: ''
+      error: '',
+      demoQuestions: [
+        '我和父母 3 个人 6 月去日本 7 天，预算 2 万，想轻松一点，怎么安排？',
+        '日本旅行交通券怎么选，JR Pass 一定划算吗？',
+        '日本旅行遇到下雨天，有什么备选方案？',
+        '低预算旅行怎么控制住宿、交通和餐饮？',
+        '带老人小孩旅行有哪些风险要提前考虑？'
+      ]
     }
   },
   methods: {
@@ -100,6 +131,12 @@ export default {
     },
     scoreLabel(score) {
       return score === null || score === undefined ? 'score: n/a' : `score: ${Number(score).toFixed(3)}`
+    },
+    documentTags(doc) {
+      return [this.scoreLabel(doc.score), ...(doc.tags || [])]
+    },
+    useDemoQuestion(question) {
+      this.message = question
     },
     modeTitle(mode) {
       const normalized = mode || 'demo'

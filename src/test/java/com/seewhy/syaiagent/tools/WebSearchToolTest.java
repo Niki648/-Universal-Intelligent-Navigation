@@ -1,23 +1,36 @@
 package com.seewhy.syaiagent.tools;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Tag;
+import com.seewhy.syaiagent.search.SearchProvider;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-@Tag("integration")
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 class WebSearchToolTest {
 
-    @Value("${search-api.api-key}")
-    private String searchApiKey;
+    @Test
+    void localResumeGenerationDoesNotCallSearchProvider() {
+        WebSearchTool tool = new WebSearchTool(new FailingSearchProvider());
+
+        String result = tool.searchWeb("生成后端Java简历 PDF");
+
+        assertTrue(result.contains("local resume generation request"));
+        assertTrue(result.contains("do not search the web"));
+    }
 
     @Test
-    void searchWeb() {
-        WebSearchTool webSearchTool = new WebSearchTool(searchApiKey);
-        String query = "百度";
-        String result = webSearchTool.searchWeb(query);
-        Assertions.assertNotNull(result);
+    void explicitResumeTemplateSearchCallsProvider() {
+        WebSearchTool tool = new WebSearchTool(query -> "searched: " + query);
+
+        String result = tool.searchWeb("搜索后端Java简历模板");
+
+        assertEquals("searched: 搜索后端Java简历模板", result);
+    }
+
+    private static class FailingSearchProvider implements SearchProvider {
+        @Override
+        public String search(String query) {
+            throw new AssertionError("Search provider should not be called for local resume generation.");
+        }
     }
 }

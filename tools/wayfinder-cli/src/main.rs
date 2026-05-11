@@ -39,6 +39,11 @@ enum CliCommand {
         #[arg(long, default_value = ".")]
         workspace: PathBuf,
     },
+    /// Validate src/main/resources/document/*.md.
+    LintRagDocs {
+        #[arg(long, default_value = ".")]
+        workspace: PathBuf,
+    },
     /// Validate Wayfinder naming governance rules.
     LintNaming {
         #[arg(long, default_value = ".")]
@@ -59,6 +64,7 @@ fn main() -> Result<()> {
         CliCommand::LintRpg { workspace } => Command::LintRpg { workspace },
         CliCommand::LintEvals { workspace } => Command::LintEvals { workspace },
         CliCommand::LintPrompts { workspace } => Command::LintPrompts { workspace },
+        CliCommand::LintRagDocs { workspace } => Command::LintRagDocs { workspace },
         CliCommand::LintNaming { workspace } => Command::LintNaming { workspace },
         CliCommand::Summary { workspace } => Command::Summary { workspace },
     };

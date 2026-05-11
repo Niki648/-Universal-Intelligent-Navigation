@@ -183,7 +183,8 @@ GET /api/travel/trace/demo-japan-family
 DEEPSEEK_API_KEY=your_key
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_CHAT_MODEL=deepseek-chat
-SEARCH_API_KEY=your_search_key
+SEARCH_PROVIDER=tavily
+TAVILY_API_KEY=your_tavily_key
 DB_URL=jdbc:postgresql://localhost:5432/your_db
 DB_USERNAME=postgres
 DB_PASSWORD=your_password

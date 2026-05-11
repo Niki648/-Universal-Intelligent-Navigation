@@ -21,9 +21,13 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -202,10 +206,10 @@ public class TravelRagService {
         Set<String> terms = tokenize(query);
         return documents.stream()
                 .filter(Objects::nonNull)
-                .map(document -> Map.entry(document, lightweightScore(document.getText(), terms)))
+                .map(document -> Map.entry(document, lightweightScore(document, terms)))
                 .filter(entry -> entry.getValue() > 0 || terms.isEmpty())
                 .sorted(Map.Entry.<Document, Double>comparingByValue(Comparator.reverseOrder()))
-                .limit(4)
+                .limit(5)
                 .map(entry -> toLightweightDocument(entry.getKey(), entry.getValue()))
                 .toList();
     }
@@ -213,27 +217,96 @@ public class TravelRagService {
     private RagRetrievedDocument toLightweightDocument(Document document, double score) {
         Map<String, Object> metadata = document.getMetadata() == null ? Map.of() : document.getMetadata();
         String filename = firstMetadata(metadata, "filename", "source", "file", "path");
-        String title = filename == null ? "Local Markdown travel note" : filename;
-        return new RagRetrievedDocument(title, "classpath:document/" + title, snippet(document.getText()), score);
+        String title = firstMetadata(metadata, "title", "filename", "name");
+        String source = firstMetadata(metadata, "source", "file", "path", "url");
+        return new RagRetrievedDocument(
+                title == null ? "Local Markdown travel note" : title,
+                source == null ? "classpath:document/" + filename : source,
+                snippet(document.getText()),
+                score,
+                firstMetadata(metadata, "id", "documentId"),
+                tagsFromMetadata(metadata),
+                firstMetadata(metadata, "updated"),
+                firstMetadata(metadata, "source_type", "sourceType")
+        );
     }
 
-    private double lightweightScore(String text, Set<String> terms) {
+    private double lightweightScore(Document document, Set<String> terms) {
         if (terms.isEmpty()) {
             return 0.1;
         }
-        String haystack = text == null ? "" : text.toLowerCase();
-        long matches = terms.stream().filter(haystack::contains).count();
-        return matches == 0 ? 0 : Math.min(1.0, (double) matches / terms.size());
+        Map<String, Object> metadata = document.getMetadata() == null ? Map.of() : document.getMetadata();
+        String title = firstMetadata(metadata, "title", "filename", "name");
+        String tags = String.join(" ", tagsFromMetadata(metadata));
+        String body = document.getText() == null ? "" : document.getText();
+        String titleHaystack = normalizeSearchText(title);
+        String tagHaystack = normalizeSearchText(tags);
+        String bodyHaystack = normalizeSearchText(body);
+
+        double score = 0;
+        for (String term : terms) {
+            String normalizedTerm = normalizeSearchText(term);
+            if (normalizedTerm.isBlank()) {
+                continue;
+            }
+            if (titleHaystack.contains(normalizedTerm)) {
+                score += 3.0;
+            }
+            if (tagHaystack.contains(normalizedTerm)) {
+                score += 2.0;
+            }
+            if (bodyHaystack.contains(normalizedTerm)) {
+                score += 1.0;
+            }
+        }
+        return score == 0 ? 0 : Math.min(1.0, score / Math.max(6.0, terms.size() * 2.4));
     }
 
     private Set<String> tokenize(String query) {
         if (query == null || query.isBlank()) {
             return Set.of();
         }
-        return Arrays.stream(query.toLowerCase().split("[^\\p{IsAlphabetic}\\p{IsDigit}]+"))
+        Set<String> terms = new LinkedHashSet<>();
+        String normalized = normalizeSearchText(query);
+        Arrays.stream(normalized.split("[^\\p{IsAlphabetic}\\p{IsDigit}]+"))
                 .map(String::strip)
                 .filter(token -> token.length() >= 2)
-                .collect(Collectors.toSet());
+                .forEach(terms::add);
+        addChineseKeywordAliases(normalized, terms);
+        return terms;
+    }
+
+    private void addChineseKeywordAliases(String query, Set<String> terms) {
+        Map<String, List<String>> aliases = Map.ofEntries(
+                Map.entry("日本", List.of("日本", "japan")),
+                Map.entry("签证", List.of("签证", "入境", "护照")),
+                Map.entry("入境", List.of("入境", "签证", "护照")),
+                Map.entry("家庭", List.of("家庭", "父母", "老人", "小孩")),
+                Map.entry("父母", List.of("父母", "老人", "家庭")),
+                Map.entry("老人", List.of("老人", "父母", "慢旅行")),
+                Map.entry("小孩", List.of("小孩", "儿童", "亲子")),
+                Map.entry("孩子", List.of("小孩", "儿童", "亲子")),
+                Map.entry("预算", List.of("预算", "低预算", "费用", "性价比")),
+                Map.entry("交通", List.of("交通", "JR Pass", "交通券", "换乘")),
+                Map.entry("jr", List.of("JR Pass", "交通券", "新干线")),
+                Map.entry("下雨", List.of("雨天", "天气", "备选方案", "室内活动")),
+                Map.entry("雨天", List.of("雨天", "天气", "备选方案", "室内活动")),
+                Map.entry("美食", List.of("美食", "餐饮", "citywalk")),
+                Map.entry("citywalk", List.of("citywalk", "城市漫步", "街区")),
+                Map.entry("安全", List.of("安全", "保险", "应急", "风险")),
+                Map.entry("保险", List.of("保险", "医疗", "安全", "理赔")),
+                Map.entry("京都", List.of("京都", "关西", "大阪")),
+                Map.entry("大阪", List.of("大阪", "关西", "京都"))
+        );
+        aliases.forEach((keyword, values) -> {
+            if (query.contains(normalizeSearchText(keyword))) {
+                terms.addAll(values);
+            }
+        });
+    }
+
+    private String normalizeSearchText(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT).strip();
     }
 
     private String simpleRewrite(String query) {
@@ -266,8 +339,31 @@ public class TravelRagService {
                 title == null ? "Travel knowledge note" : title,
                 source == null ? "local knowledge base" : source,
                 snippet(document.getText()),
-                document.getScore()
+                document.getScore(),
+                firstMetadata(metadata, "id", "documentId"),
+                tagsFromMetadata(metadata),
+                firstMetadata(metadata, "updated"),
+                firstMetadata(metadata, "source_type", "sourceType")
         );
+    }
+
+    private List<String> tagsFromMetadata(Map<String, Object> metadata) {
+        Object value = metadata.get("tags");
+        if (value instanceof Collection<?> collection) {
+            return collection.stream()
+                    .filter(Objects::nonNull)
+                    .map(Object::toString)
+                    .map(String::strip)
+                    .filter(tag -> !tag.isBlank())
+                    .toList();
+        }
+        if (value == null || value.toString().isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(value.toString().replace("[", "").replace("]", "").split(","))
+                .map(String::strip)
+                .filter(tag -> !tag.isBlank())
+                .toList();
     }
 
     private String firstMetadata(Map<String, Object> metadata, String... keys) {

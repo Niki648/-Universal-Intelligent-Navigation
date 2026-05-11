@@ -4,7 +4,7 @@
 # 也可通过环境变量配置，无需本文件：
 #   DB_URL, DB_USERNAME, DB_PASSWORD
 #   DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_CHAT_MODEL
-#   SEARCH_API_KEY
+#   SEARCH_PROVIDER, TAVILY_API_KEY
 
 spring:
   datasource:
@@ -20,5 +20,8 @@ spring:
         options:
           model: ${DEEPSEEK_CHAT_MODEL:deepseek-chat}
 
-search-api:
-  api-key: your-search-api-key
+search:
+  provider: ${SEARCH_PROVIDER:tavily}
+
+tavily:
+  api-key: ${TAVILY_API_KEY:}

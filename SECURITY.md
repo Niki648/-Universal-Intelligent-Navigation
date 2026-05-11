@@ -14,7 +14,8 @@
 | `DEEPSEEK_API_KEY`  | DeepSeek API Key                                                           |
 | `DEEPSEEK_BASE_URL` | DeepSeek OpenAI-compatible API 地址，默认 `https://api.deepseek.com`       |
 | `DEEPSEEK_CHAT_MODEL` | DeepSeek 对话模型，默认 `deepseek-chat`                                  |
-| `SEARCH_API_KEY`    | 搜索 API Key（主应用）                                                     |
+| `SEARCH_PROVIDER`   | 搜索 provider，默认 `tavily`                                                |
+| `TAVILY_API_KEY`    | Tavily 搜索 API Key（主应用）                                               |
 | `PEXELS_API_KEY`    | Pexels 图片搜索 API Key（sy-image-search-mcp 子模块）                      |
 | `AMAP_MAPS_API_KEY` | 高德地图 MCP 服务 API Key（启用 amap-maps 时需在启动前设置，子进程会继承） |
 
@@ -27,7 +28,8 @@ $env:DB_PASSWORD = "your_password"
 $env:DEEPSEEK_API_KEY = "your-deepseek-key"
 $env:DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 $env:DEEPSEEK_CHAT_MODEL = "deepseek-chat"
-$env:SEARCH_API_KEY = "your-search-api-key"
+$env:SEARCH_PROVIDER = "tavily"
+$env:TAVILY_API_KEY = "your-tavily-api-key"
 ```
 
 ## 方式二：本地配置文件（适合本地开发）

@@ -8,6 +8,7 @@ import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.Paragraph;
 import com.seewhy.syaiagent.constant.FileConstant;
+import com.seewhy.syaiagent.guardrail.GuardrailService;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
@@ -29,17 +30,27 @@ public class PDFGenerationTool {
             "/fonts/SourceHanSansSC-Regular.otf"
     };
 
+    private final GuardrailService guardrailService;
+
+    public PDFGenerationTool() {
+        this(new GuardrailService());
+    }
+
+    public PDFGenerationTool(GuardrailService guardrailService) {
+        this.guardrailService = guardrailService;
+    }
+
     @Tool(description = "Generate a PDF file with given content", returnDirect = false)
     public String generatePDF(
             @ToolParam(description = "Name of the file to save the generated PDF") String fileName,
             @ToolParam(description = "Content to be included in the PDF") String content) {
         String fileDir = FileConstant.FILE_SAVE_DIR + "/pdf";
-        String filePath = fileDir + "/" + fileName;
         try {
+            Path filePath = guardrailService.validateWritableFileName(fileName, Path.of(fileDir));
             FileUtil.mkdir(fileDir);
             // 将 Markdown 风格转为纯文，避免 PDF 里出现 ##、- 等符号
             String plainContent = markdownToPlain(content);
-            try (PdfWriter writer = new PdfWriter(filePath);
+            try (PdfWriter writer = new PdfWriter(filePath.toString());
                  PdfDocument pdf = new PdfDocument(writer);
                  Document document = new Document(pdf)) {
                 PdfFont font = resolveChineseFont();
@@ -56,7 +67,7 @@ public class PDFGenerationTool {
                 }
             }
             return "PDF generated successfully to: " + filePath;
-        } catch (IOException e) {
+        } catch (IOException | SecurityException e) {
             return "Error generating PDF: " + e.getMessage();
         }
     }

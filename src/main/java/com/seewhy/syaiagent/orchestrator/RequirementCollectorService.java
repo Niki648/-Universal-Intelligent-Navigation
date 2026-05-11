@@ -12,9 +12,19 @@ import java.util.regex.Pattern;
 @Service
 public class RequirementCollectorService {
 
-    private static final Pattern DAYS_PATTERN = Pattern.compile("\\d+\\s*(天|日|day|days)", Pattern.CASE_INSENSITIVE);
-    private static final Pattern TRAVELERS_PATTERN = Pattern.compile("\\d+\\s*(人|位|个|traveler|travelers|people)", Pattern.CASE_INSENSITIVE);
-    private static final Pattern BUDGET_PATTERN = Pattern.compile("(预算|budget|\\d+\\s*(万|元|块|cny|rmb|usd|jpy))", Pattern.CASE_INSENSITIVE);
+    private static final String CHINESE_NUMBER = "[一二两三四五六七八九十]+";
+    private static final Pattern DAYS_PATTERN = Pattern.compile(
+            "(\\d+|" + CHINESE_NUMBER + ")\\s*(天|日|晚|day|days)|\\d+\\s*[- ]?day",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern TRAVELERS_PATTERN = Pattern.compile(
+            "(\\d+|" + CHINESE_NUMBER + ")\\s*(人|位|个|traveler|travelers|people|persons|adults|kids|children)",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern BUDGET_PATTERN = Pattern.compile(
+            "(预算|budget|(\\d+|" + CHINESE_NUMBER + ")\\s*(万|元|块|cny|rmb|usd|jpy))",
+            Pattern.CASE_INSENSITIVE
+    );
     private static final List<String> DESTINATION_HINTS = List.of(
             "日本", "东京", "大阪", "京都", "成都", "北京", "上海", "广州", "深圳", "杭州", "云南", "新疆",
             "japan", "tokyo", "osaka", "kyoto", "chengdu", "beijing", "shanghai"

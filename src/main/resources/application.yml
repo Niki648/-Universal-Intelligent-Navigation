@@ -51,9 +51,11 @@ knife4j:
   setting:
     language: zh_cn
 
-# searchAPI（敏感信息请使用环境变量或 application-local.yml）
-search-api:
-  api-key: ${SEARCH_API_KEY:}
+search:
+  provider: ${SEARCH_PROVIDER:tavily}
+
+tavily:
+  api-key: ${TAVILY_API_KEY:}
 
 # Pexels 图片搜索（SyManus 搜索/下载图片用）
 pexels:
