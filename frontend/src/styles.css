@@ -994,6 +994,99 @@ main {
   font-weight: 800;
 }
 
+.score-chip.fail {
+  color: #2b1620;
+  background: #ffb4b4;
+}
+
+.score-chip.pass {
+  color: #132033;
+  background: #9eead8;
+}
+
+.eval-run-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(255, 232, 163, 0.2);
+  border-radius: 8px;
+  background: rgba(17, 27, 64, 0.8);
+}
+
+.eval-score-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.eval-score-row h2 {
+  margin: 0 0 10px;
+  color: #fff7d1;
+}
+
+.eval-input-block {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.eval-input-block strong {
+  color: #fff7d1;
+}
+
+.eval-input-block p {
+  margin: 0;
+  color: #c9d6ff;
+  line-height: 1.55;
+}
+
+.eval-plan-summary {
+  margin-top: 0;
+}
+
+.eval-rule-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.compact-eval-panel {
+  margin-top: 10px;
+  padding: 12px;
+}
+
+.eval-case-select {
+  flex: 1;
+  min-width: 220px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 232, 163, 0.24);
+  border-radius: 8px;
+  color: #fff7d1;
+  background: rgba(255, 255, 255, 0.08);
+  outline: none;
+}
+
+.eval-case-select:focus {
+  border-color: #ffd36e;
+}
+
+.eval-case-select option {
+  color: #111827;
+  background: #ffffff;
+}
+
+.rule-result-sample.passed {
+  border: 1px solid rgba(158, 234, 216, 0.28);
+}
+
+.rule-result-sample.failed {
+  border: 1px solid rgba(255, 135, 135, 0.36);
+  background: rgba(255, 135, 135, 0.08);
+}
+
 .travel-agent-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 0.82fr);
@@ -1481,6 +1574,8 @@ main {
   .travel-agent-layout,
   .tool-demo-layout,
   .eval-layout,
+  .eval-score-row,
+  .eval-rule-grid,
   .rag-explain-grid,
   .metadata-grid {
     grid-template-columns: 1fr;

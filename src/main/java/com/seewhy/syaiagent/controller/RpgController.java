@@ -3,7 +3,11 @@ package com.seewhy.syaiagent.controller;
 import com.seewhy.syaiagent.model.rpg.AgentModule;
 import com.seewhy.syaiagent.eval.TravelEvalCase;
 import com.seewhy.syaiagent.model.rpg.RpgEvalRule;
+import com.seewhy.syaiagent.model.rpg.RpgEvalCurrentPlanScoreRequest;
+import com.seewhy.syaiagent.model.rpg.RpgEvalRunRequest;
+import com.seewhy.syaiagent.model.rpg.RpgEvalRunResponse;
 import com.seewhy.syaiagent.model.rpg.RpgEvalSampleResult;
+import com.seewhy.syaiagent.model.rpg.RpgEvalScoreRequest;
 import com.seewhy.syaiagent.model.rpg.RpgNpc;
 import com.seewhy.syaiagent.model.rpg.RpgProfile;
 import com.seewhy.syaiagent.model.rpg.RpgProject;
@@ -18,12 +22,14 @@ import com.seewhy.syaiagent.service.RpgProjectService;
 import com.seewhy.syaiagent.service.RpgSkillService;
 import com.seewhy.syaiagent.service.RpgWorldService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -107,5 +113,33 @@ public class RpgController {
     @GetMapping("/evals/sample-result")
     public List<RpgEvalSampleResult> getEvalSampleResult() {
         return rpgEvalService.getSampleResults();
+    }
+
+    @PostMapping("/evals/run/{caseId}")
+    public RpgEvalRunResponse runEval(@PathVariable String caseId,
+                                      @RequestBody(required = false) RpgEvalRunRequest request) {
+        try {
+            return rpgEvalService.runEval(caseId, request);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
+        }
+    }
+
+    @PostMapping("/evals/score")
+    public RpgEvalRunResponse scoreEval(@RequestBody RpgEvalScoreRequest request) {
+        try {
+            return rpgEvalService.scorePlan(request);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
+        }
+    }
+
+    @PostMapping("/evals/score-current-plan")
+    public RpgEvalRunResponse scoreCurrentPlan(@RequestBody RpgEvalCurrentPlanScoreRequest request) {
+        try {
+            return rpgEvalService.scoreCurrentPlan(request);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        }
     }
 }

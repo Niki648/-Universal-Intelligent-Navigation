@@ -159,6 +159,48 @@
             <TagList :items="plan.loadedSkills" />
           </StarCard>
 
+          <StarCard title="Plan Quality Score" description="Scores this generated TravelPlan against your current request.">
+            <template #meta>Current Request</template>
+            <div class="form-actions">
+              <button type="button" :disabled="scoreLoading" @click="scoreCurrentPlan">
+                {{ scoreLoading ? 'Scoring...' : 'Score Current Plan' }}
+              </button>
+            </div>
+            <p class="draft-notice">
+              Scores this generated TravelPlan against your current request.
+            </p>
+            <p v-if="scoreError" class="draft-notice">{{ scoreError }}</p>
+            <div v-if="scoreResult" class="eval-run-panel compact-eval-panel">
+              <div class="eval-score-row">
+                <div>
+                  <p class="area-kicker">Scored Against Current Request</p>
+                  <h2>{{ scoreResult.result.caseName }}</h2>
+                  <span :class="['score-chip', scoreResult.result.passed ? 'pass' : 'fail']">
+                    {{ scoreResult.result.passed ? 'PASS' : 'FAIL' }}
+                    {{ scoreResult.result.score }}/{{ scoreResult.result.maxScore }}
+                  </span>
+                </div>
+                <div class="eval-input-block">
+                  <strong>Current Request</strong>
+                  <p>{{ scoreResult.input }}</p>
+                </div>
+              </div>
+              <div class="eval-rule-grid">
+                <article
+                  v-for="rule in scoreResult.result.rules"
+                  :key="rule.rule"
+                  :class="['rule-result-sample', rule.passed ? 'passed' : 'failed']"
+                >
+                  <strong>{{ rule.rule }}</strong>
+                  <span :class="['score-chip', rule.passed ? 'pass' : 'fail']">
+                    {{ rule.passed ? 'PASS' : 'FAIL' }} {{ rule.score }}/{{ rule.maxScore }}
+                  </span>
+                  <p>{{ rule.message }}</p>
+                </article>
+              </div>
+            </div>
+          </StarCard>
+
           <div class="card-actions">
             <router-link :to="{ path: '/trace', query: { chatId: planChatId } }">
               View this Agent voyage trace
@@ -195,7 +237,10 @@ export default {
       chatDraftNotice: '',
       chatDraftLanguage: 'en',
       activePlanStartedAt: '',
-      planSessionPoller: null
+      planSessionPoller: null,
+      scoreLoading: false,
+      scoreError: '',
+      scoreResult: null
     }
   },
   computed: {
@@ -283,6 +328,8 @@ export default {
           }
         )
         this.plan = data
+        this.scoreResult = null
+        this.scoreError = ''
         this.savePlanSession()
       } catch (err) {
         this.planError = this.planErrorMessage(err)
@@ -304,6 +351,9 @@ export default {
       this.chatDraft = ''
       this.chatDraftNotice = ''
       this.activePlanStartedAt = ''
+      this.scoreLoading = false
+      this.scoreError = ''
+      this.scoreResult = null
     },
     restorePlanSession() {
       try {
@@ -317,6 +367,8 @@ export default {
         this.chatDraft = saved.chatDraft || ''
         this.chatDraftNotice = saved.chatDraftNotice || ''
         this.chatDraftLanguage = saved.chatDraftLanguage || this.preferredLanguage(this.chatDraft || this.planMessage)
+        this.scoreResult = saved.scoreResult || null
+        this.scoreError = saved.scoreError || ''
         this.activePlanStartedAt = saved.activePlanStartedAt || ''
         this.planLoading = saved.taskStatus === 'Planning' && !this.plan && !this.planError
         if (this.planLoading) this.startPlanSessionPolling()
@@ -336,6 +388,8 @@ export default {
         chatDraft: this.chatDraft,
         chatDraftNotice: this.chatDraftNotice,
         chatDraftLanguage: this.chatDraftLanguage,
+        scoreResult: this.scoreResult,
+        scoreError: this.scoreError,
         activePlanStartedAt: this.activePlanStartedAt
       }))
     },
@@ -365,12 +419,35 @@ export default {
         if (saved.structuredPlan || saved.plan || saved.planError || saved.taskStatus !== 'Planning') {
           this.plan = saved.structuredPlan || saved.plan || this.plan
           this.planError = saved.planError || ''
+          this.scoreResult = saved.scoreResult || this.scoreResult
+          this.scoreError = saved.scoreError || ''
           this.planLoading = false
           this.activePlanStartedAt = ''
           this.stopPlanSessionPolling()
         }
       } catch (error) {
         console.warn('Could not refresh travel plan session.', error)
+      }
+    },
+    async scoreCurrentPlan() {
+      if (!this.plan || this.scoreLoading) return
+      this.scoreLoading = true
+      this.scoreError = ''
+      this.scoreResult = null
+      try {
+        const { data } = await api.post('/rpg/evals/score-current-plan', {
+          input: this.planMessage,
+          chatId: this.planChatId,
+          plan: this.plan,
+          observedToolCalls: []
+        })
+        this.scoreResult = data
+        this.savePlanSession()
+      } catch (error) {
+        this.scoreError = error?.response?.data?.message || error?.message || 'Could not score this TravelPlan.'
+        this.savePlanSession()
+      } finally {
+        this.scoreLoading = false
       }
     },
     handleChatCompleted(payload) {
