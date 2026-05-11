@@ -15,6 +15,8 @@
       </button>
     </div>
 
+    <p class="rag-demo-note">Demo Mode uses fixed local Markdown snippets, but retrieval and answers vary by query to show the RAG explanation path without database cost.</p>
+
     <form class="prompt-form" @submit.prevent="askRag">
       <textarea v-model="message" rows="4" placeholder="问一个旅行知识库问题..."></textarea>
       <button type="submit" :disabled="loading || !message.trim()">{{ loading ? 'Explaining...' : 'Explain RAG Answer' }}</button>
@@ -155,7 +157,7 @@ export default {
       if (normalized === 'lightweight') {
         return 'Public cost-control mode searches local Markdown snippets without PgVector or cloud database cost.'
       }
-      return 'Public demo mode returns a stable RAG explanation without PgVector or database cost.'
+      return 'Demo Mode uses fixed local Markdown snippets, but retrieval and answers vary by query to show the RAG explanation path without PgVector or database cost.'
     }
   }
 }

@@ -315,6 +315,26 @@ main {
   gap: 14px;
 }
 
+.skill-section-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: end;
+  margin: 18px 0 10px;
+}
+
+.skill-section-header h2 {
+  margin: 4px 0 0;
+  color: #fff7d1;
+}
+
+.skill-section-header p {
+  max-width: 620px;
+  margin: 0;
+  color: #c9d6ff;
+  line-height: 1.55;
+}
+
 .star-card {
   position: relative;
   display: grid;
@@ -531,13 +551,15 @@ main {
 
 .match-results {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
 .match-result {
   display: grid;
-  gap: 7px;
-  padding: 12px;
+  gap: 8px;
+  align-content: start;
+  padding: 12px 14px;
   border-radius: 8px;
   background: rgba(158, 234, 216, 0.08);
 }
@@ -546,9 +568,15 @@ main {
   color: #fff7d1;
 }
 
-.match-result span {
+.match-result p {
+  margin: 0;
   color: #c9d6ff;
   line-height: 1.5;
+}
+
+.match-result p span {
+  color: #9eead8;
+  font-weight: 800;
 }
 
 .eval-layout {
@@ -627,6 +655,12 @@ main {
   border-color: rgba(255, 211, 110, 0.72);
   color: #fff7d1;
   background: rgba(255, 211, 110, 0.12);
+}
+
+.rag-demo-note {
+  margin: 0;
+  color: #c9d6ff;
+  line-height: 1.55;
 }
 
 .inline-form input,
@@ -1569,6 +1603,7 @@ main {
   .map-shell,
   .placeholder-grid,
   .card-grid,
+  .match-results,
   .profile-layout,
   .architecture-flow,
   .travel-agent-layout,
@@ -1582,6 +1617,7 @@ main {
   }
 
   .page-title-row,
+  .skill-section-header,
   .inline-form {
     align-items: stretch;
     flex-direction: column;

@@ -154,26 +154,9 @@ public class TravelRagService {
     }
 
     private RagExplainResponse demoExplain(String originalQuery, String chatId) {
-        String query = originalQuery == null || originalQuery.isBlank()
-                ? "What should I consider for a relaxed family trip to Japan?"
-                : originalQuery.strip();
         agentTraceService.record(chatId, AgentTraceStep.RAG_RETRIEVAL, AgentTraceStatus.COMPLETED,
                 "Returned stable demo RAG explain response.", Map.of("mode", "demo"));
-        return new RagExplainResponse(
-                chatId,
-                "demo",
-                query,
-                "relaxed family travel budget risks local Markdown knowledge",
-                List.of(
-                        new RagRetrievedDocument("Demo travel guide", "demo://travel-guide",
-                                "Public demo mode returns a stable grounded-looking response without calling PgVector or a cloud database.", 0.9),
-                        new RagRetrievedDocument("Demo budget tips", "demo://budget-tips",
-                                "For cost-controlled travel planning, keep accommodation, food, transport, and uncertainty visible in the answer.", 0.84)
-                ),
-                "This public demo uses a fixed RAG response to avoid database cost. For a relaxed family trip, keep pacing light, stay near transit, budget by category, and verify live prices, weather, visa rules, and opening hours before booking.",
-                false,
-                null
-        );
+        return DemoRagExplainResponses.build(originalQuery, chatId);
     }
 
     private RagExplainResponse lightweightExplain(String originalQuery, String chatId, boolean degraded, String reason) {

@@ -2,7 +2,7 @@
   <PageShell
     eyebrow="Constellation Hall"
     title="Skills System"
-    subtitle="Reusable engineering knowledge arranged as cards the Agent can follow."
+    subtitle="See which domain skills and engineering capabilities are selected before the Agent plans."
   >
     <StarCard title="Skill Matching Demo" description="Type a travel request and see which backend Skills would be loaded before planning.">
       <form class="prompt-form" @submit.prevent="matchSkills">
@@ -11,10 +11,17 @@
       </form>
       <StateBlock v-if="matchError" type="error" title="Match failed" :message="matchError" />
       <div v-if="matchedSkills.length" class="match-results">
+        <div class="skill-section-header">
+          <div>
+            <p class="area-kicker">Matched Travel Skills</p>
+            <h2>Domain Skills Selected</h2>
+          </div>
+          <p>These domain skills are selected from the request before the Travel Agent plans.</p>
+        </div>
         <article v-for="match in matchedSkills" :key="match.id" class="match-result">
           <strong>{{ match.name }}</strong>
-          <span>{{ match.matchedReason }}</span>
-          <TagList :items="match.triggers || []" />
+          <p><span>Matched:</span> {{ displayMatchedTerms(match).join(', ') }}</p>
+          <p><span>Related:</span> {{ relatedTriggers(match).join(', ') }}</p>
         </article>
       </div>
     </StarCard>
@@ -22,18 +29,24 @@
     <StateBlock v-if="loading" type="loading" title="Loading skills" message="Fetching /api/rpg/skills." />
     <StateBlock v-else-if="error" type="error" title="Skills API unavailable" message="Showing local fallback skill cards." />
 
+    <div class="skill-section-header">
+      <div>
+        <p class="area-kicker">Backend Compass</p>
+        <h2>Engineering Capabilities</h2>
+      </div>
+      <p>These portfolio engineering capabilities explain how the Agent system is built, evaluated, and guarded, including Spring AI Agent Design, Agent Evaluation, Guardrail Design, and Full-stack Product Sense.</p>
+    </div>
+
     <div class="card-grid">
       <StarCard
         v-for="skill in normalizedSkills"
         :key="skill.id"
-        :class="{ highlighted: isMatched(skill) }"
         :title="skill.name"
         :description="skill.description"
       >
         <template #meta>
           <span>{{ skill.rpgName }}</span>
           <span class="rarity">Level {{ skill.level }}</span>
-          <span v-if="isMatched(skill)" class="match-badge">Matched</span>
         </template>
         <TagList :items="[skill.category, ...skill.keywords]" />
         <div class="section-block">
@@ -64,6 +77,33 @@ const SKILL_FALLBACKS = {
   'rag-knowledge-engineering': { rpgName: 'Memory Star', relatedAgents: ['RAG Library'] },
   'agent-evaluation': { rpgName: 'Lighthouse Lens', relatedAgents: ['Eval Harness'] },
   'guardrail-design': { rpgName: 'Safety Rail', relatedAgents: ['Travel Agent', 'Tool Agent'] }
+}
+
+const SKILL_USE_CASES = {
+  'java-backend-architecture': [
+    'Keep controller, service, and domain boundaries explicit.',
+    'Make backend behavior easy to test and explain.'
+  ],
+  'spring-ai-agent-design': [
+    'Compose prompts, structured output, tool calls, and traceable runs.',
+    'Explain where model behavior ends and application logic begins.'
+  ],
+  'rag-knowledge-engineering': [
+    'Connect retrieved context to grounded answers.',
+    'Make knowledge-backed responses easier to inspect.'
+  ],
+  'agent-evaluation': [
+    'Use fixed cases, scoring rules, and regression checks.',
+    'Show why an Agent answer is reliable enough to ship.'
+  ],
+  'guardrail-design': [
+    'Set input, tool, and output boundaries for safer demos.',
+    'Keep risky actions blocked or clearly explained.'
+  ],
+  'fullstack-product-sense': [
+    'Shape the demo around user paths and inspectable outcomes.',
+    'Turn backend capability into a clear portfolio experience.'
+  ]
 }
 
 const FALLBACK_SKILLS = [
@@ -104,19 +144,13 @@ export default {
           category: skill.category || 'Engineering',
           description: skill.description || '',
           keywords,
-          useCases: skill.useCases || [
+          useCases: skill.useCases || SKILL_USE_CASES[skill.id] || [
             `Apply ${skill.name} in a real backend capability.`,
             'Explain the engineering boundary in portfolio interviews.'
           ],
           relatedAgents: skill.relatedAgents || fallback.relatedAgents || ['Travel Agent']
         }
       })
-    },
-    matchedIds() {
-      return new Set(this.matchedSkills.map((skill) => skill.id))
-    },
-    matchedCategories() {
-      return new Set(this.matchedSkills.map((skill) => (skill.category || '').toLowerCase()))
     }
   },
   async mounted() {
@@ -143,8 +177,16 @@ export default {
         this.matching = false
       }
     },
-    isMatched(skill) {
-      return this.matchedIds.has(skill.id) || this.matchedCategories.has((skill.category || '').toLowerCase())
+    displayMatchedTerms(match) {
+      const terms = match.matchedTerms || []
+      return terms.length ? terms : ['Matched by skill metadata']
+    },
+    relatedTriggers(match) {
+      const matched = new Set((match.matchedTerms || []).map((item) => String(item).toLowerCase()))
+      const triggers = (match.triggers || []).filter((item) => !matched.has(String(item).toLowerCase()))
+      const visible = triggers.slice(0, 4)
+      const remaining = triggers.length - visible.length
+      return remaining > 0 ? [...visible, `+${remaining} more`] : visible
     }
   }
 }

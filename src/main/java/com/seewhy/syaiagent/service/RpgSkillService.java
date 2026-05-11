@@ -11,14 +11,18 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class RpgSkillService {
 
     private static final String SKILLS_RESOURCE = "rpg/skills.json";
+    private static final Pattern MONEY_PATTERN = Pattern.compile("\\b\\d{3,7}\\s*(?:CNY|RMB|USD|JPY)?\\b", Pattern.CASE_INSENSITIVE);
 
     private final List<RpgSkill> skills;
     private final SkillLoaderService skillLoaderService;
@@ -41,11 +45,11 @@ public class RpgSkillService {
             rpgSkillByCategory.put(normalize(skill.category()), skill);
         }
         return skillLoaderService.selectSkills(message).stream()
-                .map(skill -> toMatch(skill, rpgSkillByCategory))
+                .map(skill -> toMatch(skill, rpgSkillByCategory, message))
                 .toList();
     }
 
-    private RpgSkillMatch toMatch(Skill skill, Map<String, RpgSkill> rpgSkillByCategory) {
+    private RpgSkillMatch toMatch(Skill skill, Map<String, RpgSkill> rpgSkillByCategory, String message) {
         RpgSkill mapped = mapToRpgSkill(skill, rpgSkillByCategory);
         String category = mapped == null ? inferCategory(skill) : mapped.category();
         String level = mapped == null ? "intermediate" : mapped.level();
@@ -53,6 +57,7 @@ public class RpgSkillService {
         String description = mapped == null || mapped.description() == null || mapped.description().isBlank()
                 ? skill.description()
                 : mapped.description();
+        List<String> matchedTerms = matchedTerms(skill, message);
         return new RpgSkillMatch(
                 skill.id(),
                 skill.name(),
@@ -60,9 +65,33 @@ public class RpgSkillService {
                 level,
                 category,
                 description,
+                matchedTerms,
                 skill.triggers(),
-                "Matched by travel skill triggers: " + String.join(", ", skill.triggers())
+                matchedTerms.isEmpty()
+                        ? "Matched by travel skill metadata."
+                        : "Matched terms: " + String.join(", ", matchedTerms)
         );
+    }
+
+    private List<String> matchedTerms(Skill skill, String message) {
+        String normalizedInput = normalize(message);
+        List<String> terms = new ArrayList<>();
+        for (String trigger : skill.triggers()) {
+            String normalizedTrigger = normalize(trigger);
+            if (!normalizedTrigger.isBlank() && normalizedInput.contains(normalizedTrigger)) {
+                terms.add(trigger);
+            }
+        }
+        if ("budget-travel".equals(skill.id())) {
+            Matcher matcher = MONEY_PATTERN.matcher(message == null ? "" : message);
+            while (matcher.find()) {
+                String amount = matcher.group().trim();
+                if (!amount.isBlank() && terms.stream().noneMatch(item -> normalize(item).equals(normalize(amount)))) {
+                    terms.add(amount);
+                }
+            }
+        }
+        return terms.stream().distinct().toList();
     }
 
     private RpgSkill mapToRpgSkill(Skill skill, Map<String, RpgSkill> rpgSkillByCategory) {

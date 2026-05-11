@@ -1,7 +1,6 @@
 package com.seewhy.syaiagent.service;
 
 import com.seewhy.syaiagent.model.RagExplainResponse;
-import com.seewhy.syaiagent.model.RagRetrievedDocument;
 import com.seewhy.syaiagent.model.TravelPlan;
 import com.seewhy.syaiagent.model.rpg.RpgEvalSampleResult;
 import com.seewhy.syaiagent.trace.AgentTraceEvent;
@@ -63,25 +62,7 @@ public class WayfinderDemoService {
     }
 
     public RagExplainResponse demoRagExplain(String originalQuery, String chatId) {
-        String query = originalQuery == null || originalQuery.isBlank()
-                ? "What should I consider for a relaxed family trip to Japan?"
-                : originalQuery;
-        String id = chatId == null || chatId.isBlank() ? "demo-rag-japan-family" : chatId;
-        return new RagExplainResponse(
-                id,
-                "demo",
-                query,
-                "relaxed Japan family trip planning budget risks parents",
-                List.of(
-                        new RagRetrievedDocument("Family Travel Planning Skill", "classpath:skills/family-trip-planning/SKILL.md",
-                                "Prefer slower pacing, fewer hotel changes, transit convenience, and backup rest time when planning for parents or family groups.", 0.91),
-                        new RagRetrievedDocument("Japan Travel Skill", "classpath:skills/japan-travel/SKILL.md",
-                                "Japan itineraries should account for city-to-city travel, rail convenience, temple walking distance, and seasonal crowd/weather uncertainty.", 0.87)
-                ),
-                "For a relaxed family trip to Japan, keep the first day light, reduce hotel changes, stay near transit, reserve rest windows, and treat budget numbers as estimates. Confirm visa, weather, hotel prices, and opening hours from official or current sources before booking.",
-                false,
-                null
-        );
+        return DemoRagExplainResponses.build(originalQuery, chatId);
     }
 
     public List<AgentTraceEvent> demoTrace(String chatId) {
