@@ -2,7 +2,7 @@ spring:
   application:
     name: sy-image-search-mcp
   profiles:
-    active: sse,local
+    active: ${MCP_SPRING_PROFILES_ACTIVE:sse}
 server:
   port: 8127
 

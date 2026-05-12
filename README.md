@@ -1,125 +1,188 @@
-# Wayfinder Guild · AI Engineering Portfolio
+# Wayfinder Guild
 
-> 本项目用于个人学习、求职展示与大模型应用工程实践。
+[中文 README](README.zh-CN.md)
 
-Wayfinder Guild 是一个基于 **Spring Boot 3.4 + Java 21 + Spring AI + DeepSeek + Vue 3 + Phaser** 的 AI 工程师作品集与 Agentic AI 能力展示平台。项目以温暖星海旅行小镇为体验入口，展示旅行规划 Agent、SyManus 工具 Agent、RAG、Skills、Eval Harness、Guardrails 与 Agent Trace 等工程能力。
+Wayfinder Guild is an AI engineering portfolio and Agentic AI demo built with Spring Boot 3.4, Java 21, Spring AI, DeepSeek's OpenAI-compatible API, Vue 3, Vite, and Phaser. The first screen is an explorable RPG-style portfolio town; the backend demonstrates travel planning agents, SyManus tool use, RAG, Skills, evals, guardrails, and agent traceability.
 
-其中旅行规划仍然是核心业务领域，因此代码中的 `TravelPlan`、`TravelRagService` 等领域命名会保留；对外产品品牌统一使用 Wayfinder。
+The public brand is Wayfinder Guild. Travel planning is still the core domain, so code names such as `TravelPlan`, `TravelRagService`, and related travel model names are intentionally retained.
 
-## 核心能力
+## Capabilities
 
-| 能力 | 说明 |
+| Capability | What It Shows |
 | --- | --- |
-| 多轮旅行对话 | 基于 Spring AI ChatClient，支持同步与 SSE 流式对话 |
-| 结构化旅行方案 | `POST /api/travel/plan` 输出 `TravelPlan`，便于后续卡片展示和报告生成 |
-| Skills 系统 | 通过 `src/main/resources/skills/**/SKILL.md` 按场景加载旅行技能 |
-| 轻量多智能体编排 | `RequirementCollector -> ItineraryPlanner -> BudgetEstimator -> RiskAdvisor -> ReportComposer` |
-| RAG 知识库问答 | 支持 Markdown 旅行知识文档与 VectorStore 检索增强 |
-| 工具调用与 MCP | 支持搜索、抓取、下载、文件、PDF、终端、图片搜索 MCP 等工具能力 |
-| Guardrails | 输入、工具、URL、文件路径、终端命令、模型输出安全控制 |
-| Agent Trace | 记录意图识别、Skill 加载、检索、规划、预算、风险、报告等关键步骤 |
-| Eval Harness | 通过配置化 case 自动评估旅行方案质量，降低 Prompt/Agent 退化风险 |
+| Travel chat | Spring AI `ChatClient` with sync and SSE streaming endpoints. |
+| Structured planning | `POST /api/travel/plan` returns a typed `TravelPlan` for cards, scoring, and trace review. |
+| Skills | Markdown skills in `src/main/resources/skills/**/SKILL.md` are selected by travel context. |
+| Agent orchestration | `RequirementCollector -> ItineraryPlanner -> BudgetEstimator -> RiskAdvisor -> ReportComposer`. |
+| RAG | Stable demo RAG, local Markdown retrieval, and optional PgVector retrieval. |
+| SyManus tools | Bounded file, PDF, image, download, web search/scrape, terminal, and artifact-link demos. |
+| Guardrails | Input checks, URL/file/terminal boundaries, travel output softening, and artifact validation. |
+| Agent Trace | Records intent, skill loading, RAG, planning, budget, risk, report, tool, and MCP steps. |
+| Eval Harness | Configured travel eval cases plus a Rust static quality gate for project metadata. |
 
-## 技术栈
+## Tech Stack
 
-| 类型 | 技术 |
+| Layer | Stack |
 | --- | --- |
-| 后端 | Spring Boot 3.4, Java 21, Maven |
-| 大模型 | Spring AI, DeepSeek OpenAI-compatible API |
-| 对话记忆 | MessageWindowChatMemory, 自定义 FileBasedChatMemory |
-| RAG | Spring AI VectorStore, PgVector, Markdown Document Reader |
-| Agent | 自研 ReActAgent, ToolCallAgent, SyManus |
-| 工具 | Spring AI `@Tool`, Hutool, Jsoup, iText 9 |
-| MCP | Spring AI MCP Client, 独立 `sy-image-search-mcp` 子模块 |
-| 前端 | Vue 3, Vite, Axios |
-| 测试 | JUnit 5, Mockito, Spring Boot Test |
+| Backend | Spring Boot 3.4, Java 21, Maven |
+| LLM | Spring AI, DeepSeek OpenAI-compatible API |
+| RAG | Spring AI VectorStore, PgVector, Markdown documents |
+| Agent/tooling | Spring AI `@Tool`, custom ReAct/SyManus agents, Hutool, Jsoup, iText 9 |
+| Frontend | Vue 3, Vite, Axios, Phaser |
+| Optional MCP | `sy-image-search-mcp`, Spring AI MCP server/client |
+| Quality | JUnit 5, Mockito, Rust `tools/wayfinder-cli` |
 
-## 后端架构
-
-结构化旅行规划主链路：
+## Architecture
 
 ```text
-WayfinderTravelController
-  -> WayfinderTravelFacade
-    -> TravelOrchestratorService
-      -> RequirementCollectorService
-      -> ItineraryPlannerService
-        -> TravelPlanService
-          -> SkillLoaderService
-          -> ChatClient / DeepSeek
-      -> BudgetEstimatorService
-      -> RiskAdvisorService
-      -> ReportComposerService
+Vue / Phaser frontend
+  -> /api reverse proxy
+    -> WayfinderTravelController
+      -> WayfinderTravelFacade
+        -> TravelOrchestratorService
+          -> RequirementCollectorService
+          -> ItineraryPlannerService
+            -> TravelPlanService
+              -> SkillLoaderService
+              -> ChatClient / DeepSeek
+          -> BudgetEstimatorService
+          -> RiskAdvisorService
+          -> ReportComposerService
 ```
 
-支撑能力：
+Supporting services:
 
 ```text
-GuardrailService      输入/工具/输出护栏
-AgentTraceService     Agent 执行过程追踪
-TravelEvalHarness     旅行规划质量评估
-SkillLoaderService    Markdown Skills 加载与选择
+GuardrailService       input, tool, URL, file, terminal, and output safety
+TravelRagService       demo / lightweight / pgvector RAG modes
+AgentTraceService      in-memory execution trace and SSE stream
+TravelEvalHarness      deterministic scoring for TravelPlan quality
+SyManus                bounded tool-calling agent with artifact registration
+Wayfinder CLI          Rust static checks for skills, RPG data, evals, prompts, RAG docs, naming
 ```
 
-更完整的设计说明见：[docs/AGENTIC-TRAVEL-BACKEND.md](docs/AGENTIC-TRAVEL-BACKEND.md)。
-
-## 目录结构
+## Repository Layout
 
 ```text
-sy-ai-agent/
-├─ src/main/java/com/seewhy/syaiagent/
-│  ├─ controller/       # HTTP 接口
-│  ├─ app/              # WayfinderTravelFacade 兼容门面
-│  ├─ service/          # Travel Chat / Plan / RAG / Tool / MCP 服务
-│  ├─ orchestrator/     # 轻量多智能体编排与专家服务
-│  ├─ skill/            # Skill 数据模型与加载服务
-│  ├─ guardrail/        # 输入、工具、输出护栏
-│  ├─ trace/            # Agent Trace 事件与服务
-│  ├─ eval/             # TravelEvalHarness
-│  ├─ agent/            # ReActAgent / ToolCallAgent / SyManus
-│  ├─ tools/            # 搜索、抓取、下载、文件、PDF、终端等工具
-│  └─ rag/              # 文档加载、向量库、查询改写
-├─ src/main/resources/
-│  ├─ skills/           # 旅行 Skills 配置
-│  ├─ document/         # RAG Markdown 文档
-│  └─ application.yml
-├─ evals/               # 旅行评估样例
-├─ docs/                # 架构、测试、MCP、面试说明
-├─ frontend/            # Vue 3 + Vite 前端
-└─ sy-image-search-mcp/ # 可选图片搜索 MCP 服务
+.
+|-- src/main/java/com/seewhy/syaiagent/
+|   |-- controller/       HTTP APIs
+|   |-- app/              Wayfinder facade
+|   |-- service/          chat, plan, RAG, trace, demo, RPG services
+|   |-- orchestrator/     multi-step travel planning pipeline
+|   |-- agent/            ReAct, ToolCallAgent, SyManus
+|   |-- tools/            search, scrape, download, file, PDF, terminal, image tools
+|   |-- rag/              document loading, query rewriting, PgVector config
+|   |-- guardrail/        safety checks
+|   |-- trace/            agent trace model and service
+|   `-- eval/             travel eval harness
+|-- src/main/resources/
+|   |-- skills/           travel skills
+|   |-- document/         local RAG Markdown documents
+|   |-- rpg/              portfolio town metadata
+|   `-- prompts/          RPG prompt templates
+|-- frontend/             Vue 3 + Vite + Phaser app
+|-- sy-image-search-mcp/  optional Pexels image-search MCP server
+|-- tools/wayfinder-cli/  Rust static quality checker
+|-- evals/                travel eval cases
+`-- docs/                 architecture, deployment, verification, naming, RAG docs
 ```
 
-## Skills 示例
+## Run Locally
 
-当前内置旅行 Skills：
+Requirements:
 
-- `family-trip-planning`
-- `japan-travel`
-- `budget-travel`
-- `relaxed-travel`
-- `food-citywalk`
+- JDK 21
+- Maven 3.6+ or the included Maven wrapper scripts
+- Node.js 18+
+- Rust/Cargo only for `tools/wayfinder-cli`
 
-规范文件：[src/main/resources/skills/SKILL.md](src/main/resources/skills/SKILL.md)
+The Maven wrapper is configured as `distributionType=only-script`, so the repository intentionally does not track `.mvn/wrapper/maven-wrapper.jar`.
 
-## 主要 API
+Backend:
 
-默认后端地址：`http://localhost:8123/api`
+```powershell
+$env:SPRING_PROFILES_ACTIVE = "local"
+mvn spring-boot:run
+```
 
-| 接口 | 方法 | 说明 |
+Frontend:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Default backend URL: `http://localhost:8123/api`  
+Default frontend URL: `http://localhost:5173`
+
+## Environment
+
+Public production should use server-side environment variables, not committed local config files.
+
+| Variable | Purpose |
+| --- | --- |
+| `SPRING_PROFILES_ACTIVE` | Use `prod` for deployment, `local` only for local `application-local.yml`. |
+| `WAYFINDER_DEMO_ENABLED` | `true` for public Demo Mode; `false` for Owner Live Mode. |
+| `TRAVEL_RAG_MODE` | `demo`, `lightweight`, or `pgvector`. |
+| `DEEPSEEK_API_KEY` | Required for Owner Live model calls; public Demo Mode boots with a non-secret disabled placeholder. |
+| `DEEPSEEK_BASE_URL` | Defaults to `https://api.deepseek.com`. |
+| `DEEPSEEK_CHAT_MODEL` | Defaults to `deepseek-chat`. |
+| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Required only for PgVector mode. |
+| `SEARCH_PROVIDER`, `TAVILY_API_KEY` | Optional live web search. Default is `disabled`; use `tavily` only for Owner Live Mode. |
+| `PEXELS_API_KEY` | Optional image search / MCP key. |
+| `AMAP_MAPS_API_KEY` | Optional AMap MCP key. |
+| `WAYFINDER_CORS_ALLOWED_ORIGIN_PATTERNS` | Comma-separated allowed frontend origins. |
+| `SPRINGDOC_API_DOCS_ENABLED`, `SPRINGDOC_SWAGGER_UI_ENABLED`, `KNIFE4J_ENABLE` | Keep `false` in public deployment unless deliberately exposing API docs. |
+
+Local secret templates:
+
+- `.env.example`
+- `src/main/resources/application-local.yml.example`
+- `sy-image-search-mcp/src/main/resources/application-local.yml.example`
+
+Never commit real `.env`, `application-local.yml`, `private-docs`, `data`, `tmp`, `target`, `node_modules`, IDE files, or generated build outputs.
+
+## Modes
+
+**Demo Mode**: `WAYFINDER_DEMO_ENABLED=true`, `TRAVEL_RAG_MODE=demo`
+
+Use this for the public portfolio. It keeps core pages stable, avoids live model/vector costs for demo paths, and keeps the RAG Library deterministic.
+
+**Owner Live Mode**: `WAYFINDER_DEMO_ENABLED=false`
+
+Use this only for controlled demos where keys, model quota, tool boundaries, and database availability are known. Pair it with `TRAVEL_RAG_MODE=lightweight` for local Markdown retrieval or `TRAVEL_RAG_MODE=pgvector` for PgVector.
+
+RAG behavior:
+
+- `demo`: fixed explainable RAG responses for public stability.
+- `lightweight`: retrieves bundled Markdown from `src/main/resources/document/*.md` without PgVector.
+- `pgvector`: uses Spring AI VectorStore and PgVector; if unavailable, the service degrades to lightweight retrieval.
+
+## Main APIs
+
+Base path: `/api`
+
+| Endpoint | Method | Purpose |
 | --- | --- | --- |
-| `/travel/chat` | POST | 普通旅行对话 |
-| `/travel/chat/stream` | GET | SSE 流式旅行对话 |
-| `/travel/plan` | POST | 结构化旅行规划 |
-| `/travel/report` | POST | 结构化旅行报告 |
-| `/travel/rag` | POST | RAG 知识库问答 |
-| `/travel/manus/chat` | GET | SyManus 智能体流式对话 |
-| `/travel/trace/{chatId}` | GET | 查询 Agent Trace |
-| `/travel/trace/{chatId}/stream` | GET | SSE Trace 事件流 |
-| `/travel/health` | GET | 健康检查 |
+| `/health` | GET | Root health check. |
+| `/travel/health` | GET | Travel service health check. |
+| `/travel/chat` | POST | Sync travel chat. |
+| `/travel/chat/stream` | GET | SSE travel chat stream. |
+| `/travel/plan` | POST | Structured `TravelPlan`. |
+| `/travel/report` | POST | Structured travel report. |
+| `/travel/rag` | POST | RAG answer. |
+| `/travel/rag/explain` | POST | RAG answer with retrieved documents. |
+| `/travel/manus/chat` | GET | SyManus tool-agent stream. |
+| `/travel/manus/demo-tool` | POST | Fixed safe demo tool runs. |
+| `/travel/manus/artifacts/{artifactId}` | GET | Secure artifact preview. |
+| `/travel/trace/{chatId}` | GET | Agent trace history. |
+| `/travel/trace/{chatId}/stream` | GET | Agent trace SSE stream. |
+| `/rpg/world` | GET | Phaser portfolio map metadata. |
+| `/rpg/evals/run/{caseId}` | POST | Run a live eval case. |
 
-### 结构化旅行规划示例
-
-请求：
+Example:
 
 ```http
 POST /api/travel/plan
@@ -128,197 +191,61 @@ Content-Type: application/json
 
 ```json
 {
-  "message": "我和父母 3 个人，6 月去日本 7 天，预算 2 万，想轻松一点",
+  "message": "Plan a relaxed 7-day Japan family trip for 3 people in June with a 20000 CNY budget.",
   "chatId": "demo-japan-family"
 }
 ```
 
-期望响应结构：
+## Verification
 
-```json
-{
-  "summary": "...",
-  "destination": "日本",
-  "departure": "6月",
-  "days": 7,
-  "travelers": 3,
-  "budget": {
-    "total": 20000,
-    "currency": "CNY",
-    "items": []
-  },
-  "itineraryDays": [],
-  "transportation": [],
-  "accommodation": [],
-  "risks": [],
-  "alternatives": [],
-  "loadedSkills": [
-    "family-trip-planning",
-    "japan-travel",
-    "relaxed-travel",
-    "budget-travel"
-  ]
-}
-```
-
-Trace 验证：
-
-```http
-GET /api/travel/trace/demo-japan-family
-```
-
-## 本地运行
-
-### 环境要求
-
-- JDK 21
-- Maven 3.6+
-- Node.js 18+，仅前端需要
-
-### 配置
-
-敏感信息不要提交到 Git。推荐使用环境变量：
-
-```bash
-DEEPSEEK_API_KEY=your_key
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_CHAT_MODEL=deepseek-chat
-SEARCH_PROVIDER=tavily
-TAVILY_API_KEY=your_tavily_key
-DB_URL=jdbc:postgresql://localhost:5432/your_db
-DB_USERNAME=postgres
-DB_PASSWORD=your_password
-```
-
-也可以复制 `src/main/resources/application-local.yml.example` 为 `application-local.yml`，本地填写配置。`application-local.yml` 已在 `.gitignore` 中排除。
-
-### 启动后端
-
-```bash
-mvn spring-boot:run
-```
-
-访问：
-
-- 健康检查：`http://localhost:8123/api/travel/health`
-- Swagger：`http://localhost:8123/api/swagger-ui.html`
-- Knife4j：`http://localhost:8123/api/doc.html`
-
-### 启动前端
-
-```bash
+```powershell
+mvn test
 cd frontend
-npm install
-npm run dev
-```
-
-## 测试
-
-默认快速测试：
-
-```bash
+npm run build
+cd ..\tools\wayfinder-cli
+cargo test
+cargo run -- doctor --workspace ..\..
+cd ..\..\sy-image-search-mcp
 mvn test
 ```
 
-包含 integration 测试：
+See [docs/VERIFY.md](docs/VERIFY.md) for the release-candidate checklist.
 
-```bash
-mvn test -P with-integration-tests
+## Deployment Notes
+
+Recommended public runtime:
+
+```env
+SPRING_PROFILES_ACTIVE=prod
+WAYFINDER_DEMO_ENABLED=true
+TRAVEL_RAG_MODE=demo
+WAYFINDER_CORS_ALLOWED_ORIGIN_PATTERNS=https://your-domain.example
+SPRINGDOC_API_DOCS_ENABLED=false
+SPRINGDOC_SWAGGER_UI_ENABLED=false
+KNIFE4J_ENABLE=false
+LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_AI=INFO
+LOGGING_LEVEL_COM_SEEWHY_SYAIAGENT=INFO
 ```
 
-运行 Eval Runner，默认会触发模型调用，请确保 DeepSeek 配置可用：
+Serve `frontend/dist` behind HTTPS and reverse proxy `/api` to Spring Boot. Keep live model, PgVector, MCP, terminal, file-write, and download demos behind owner-controlled settings.
 
-```bash
-mvn spring-boot:run -Dspring-boot.run.arguments=--travel.eval.enabled=true
-```
+Before creating a new public GitHub repository:
 
-测试与发布验证说明见：[docs/VERIFY.md](docs/VERIFY.md) 与 [docs/TEST-REPORT-WAYFINDER.md](docs/TEST-REPORT-WAYFINDER.md)。
+- rotate any key that may have existed in local files or old history;
+- run a secret scan on the final branch/history;
+- keep `application-local.yml`, `.env`, `private-docs`, `data`, `tmp`, `target`, `node_modules`, and IDE files out of Git;
+- decide whether to publish `sy-image-search-mcp` with this repository or document it as optional.
 
-## 相关文档
+## Documentation
 
-- [Agentic Travel Backend 架构说明](docs/AGENTIC-TRAVEL-BACKEND.md)
-- [Wayfinder Guild PRD](docs/PRD-WAYFINDER-GUILD.md)
-- [Wayfinder 技术设计](docs/TECH-DESIGN-WAYFINDER.md)
-- [部署指南](docs/DEPLOYMENT.md)
-- [RAG 成本策略](docs/RAG-COST-STRATEGY.md)
-- [命名规范](docs/NAMING-GUIDE.md)
-- [命名审计](docs/NAMING-AUDIT.md)
-- [安全配置说明](SECURITY.md)
-
-## 安全说明
-
-- 不要把真实 API Key、数据库密码、搜索服务 Key 提交到仓库。
-- 工具调用已接入 Guardrails，但真实生产环境仍建议进一步接入鉴权、审计、限流和人工确认。
-- 旅行建议中的签证、天气、政策、价格、营业时间等信息需要以官方和实时信息为准。
+- [Deployment Guide](docs/DEPLOYMENT.md)
+- [Verification Guide](docs/VERIFY.md)
+- [Security Notes](SECURITY.md)
+- [Agentic Travel Backend](docs/AGENTIC-TRAVEL-BACKEND.md)
+- [Technical Design](docs/TECH-DESIGN-WAYFINDER.md)
+- [RAG Cost Strategy](docs/RAG-COST-STRATEGY.md)
+- [Wayfinder CLI](tools/wayfinder-cli/README.md)
 
 ## License
 
-本项目采用 [MIT License](LICENSE)。
-
-## Wayfinder Guild Launch Docs
-
-Wayfinder Guild is the production-ready portfolio layer of this project: a warm cosmic travel RPG site for demonstrating Agent, RAG, Skills, Eval, Trace, Guardrails, and backend architecture.
-
-### RAG cost-control modes
-
-Public production does not require PgVector or a cloud database. Configure RAG with:
-
-```env
-TRAVEL_RAG_MODE=demo
-```
-
-Supported values:
-
-- `demo` - stable public RAG explain response with no database cost.
-- `lightweight` - searches local `src/main/resources/document/*.md` snippets.
-- `pgvector` - optional Owner Live / local deep demo mode using PgVector `VectorStore`.
-
-If `pgvector` is selected but VectorStore is unavailable, the API degrades to lightweight Markdown retrieval and does not fail the request with a 500.
-
-Useful launch and interview documents:
-
-- [Production Deployment Guide](docs/DEPLOYMENT.md)
-- [Verification Guide](docs/VERIFY.md)
-- [Wayfinder PRD](docs/PRD-WAYFINDER-GUILD.md)
-- [Wayfinder Technical Design](docs/TECH-DESIGN-WAYFINDER.md)
-- [Wayfinder Test Report](docs/TEST-REPORT-WAYFINDER.md)
-- [Release Notes v0.1.0](docs/RELEASE-NOTES-v0.1.0.md)
-- [RAG Cost Strategy](docs/RAG-COST-STRATEGY.md)
-- [Agentic Travel Backend Notes](docs/AGENTIC-TRAVEL-BACKEND.md)
-
-Release governance and launch review:
-
-- PRD: target users, scope, non-goals, acceptance criteria, Demo Mode / Owner Live Mode strategy
-- Technical design: frontend, backend, Agentic Travel, RPG metadata, Rust CLI, security, degradation, deployment topology
-- Test report: automated verification, manual smoke route, and known risks
-- Release notes: v0.1.0 content, config, rollback, and post-launch checks
-- Gray release plan: local acceptance, staging, small-scope access, public launch, metrics, and rollback conditions
-
-## Wayfinder CLI
-
-`tools/wayfinder-cli` is a Rust developer toolchain for checking Wayfinder Guild metadata before demos, deployments, and release candidates.
-
-Commands:
-
-- `doctor` - run all static checks and print a resource summary
-- `lint-skills` - validate `src/main/resources/skills/**/SKILL.md`
-- `lint-rpg` - validate `src/main/resources/rpg/*.json`
-- `lint-evals` - validate `evals/travel-cases.json`
-- `lint-prompts` - validate `src/main/resources/prompts/rpg/*.st`
-- `lint-naming` - validate Wayfinder Guild naming governance
-- `summary` - print counts for Skills, RPG areas/NPCs/projects/modules, eval cases, and prompt templates
-
-Example:
-
-```powershell
-cd tools/wayfinder-cli
-cargo test
-cargo run -- doctor --workspace ..\..
-cargo run -- lint-naming --workspace ..\..
-```
-
-If PowerShell has not picked up Rust in `PATH`, use:
-
-```powershell
-C:\Users\cycle\.cargo\bin\cargo.exe run -- doctor --workspace ..\..
-```
+This project is released under the [MIT License](LICENSE).

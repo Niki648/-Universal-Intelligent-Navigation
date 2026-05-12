@@ -78,12 +78,12 @@ public class ToolCallAgent extends ReActAgent {
             AssistantMessage assistantMessage = chatResponse.getResult().getOutput();
             List<AssistantMessage.ToolCall> toolCallList = assistantMessage.getToolCalls();
             String result = assistantMessage.getText();
-            log.info("{} thought: {}", getName(), result);
+            log.info("{} thought generated, chars={}", getName(), result == null ? 0 : result.length());
             log.info("{} selected {} tool(s)", getName(), toolCallList.size());
             String toolCallInfo = toolCallList.stream()
-                    .map(toolCall -> String.format("tool=%s args=%s", toolCall.name(), toolCall.arguments()))
+                    .map(toolCall -> "tool=" + toolCall.name())
                     .collect(Collectors.joining("\n"));
-            log.info(toolCallInfo);
+            log.info("{} tool plan:\n{}", getName(), toolCallInfo);
 
             if (toolCallList.isEmpty()) {
                 getMessageList().add(assistantMessage);
@@ -130,7 +130,7 @@ public class ToolCallAgent extends ReActAgent {
         String results = toolResponseMessage.getResponses().stream()
                 .map(response -> "Tool " + response.name() + " returned: " + response.responseData())
                 .collect(Collectors.joining("\n"));
-        log.info(results);
+        log.debug("{} raw tool results chars={}", getName(), results.length());
         String sanitizedResults = sanitizeCurrentRunPaths(results);
         if (currentRunArtifacts.isEmpty() && isRecoverableUnsafeFilenameResult(sanitizedResults)) {
             return "I adjusted the file name to meet safe download rules and will retry with a normalized file name.";

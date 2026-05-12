@@ -29,7 +29,7 @@ public class TravelMcpService {
     }
 
     public String chatWithMcp(String message, String chatId) {
-        log.info("Travel MCP chat [{}]: {}", chatId, message);
+        log.info("Travel MCP chat [{}], message chars={}", chatId, message == null ? 0 : message.length());
         agentTraceService.record(chatId, AgentTraceStep.MCP_CALL, AgentTraceStatus.STARTED, "MCP travel service call started.");
 
         ChatResponse chatResponse = chatClient
@@ -42,7 +42,7 @@ public class TravelMcpService {
                 .chatResponse();
 
         String content = chatResponse.getResult().getOutput().getText();
-        log.info("Travel MCP response [{}]: {}", chatId, content);
+        log.info("Travel MCP response [{}], chars={}", chatId, content == null ? 0 : content.length());
         agentTraceService.record(chatId, AgentTraceStep.MCP_CALL, AgentTraceStatus.COMPLETED, "MCP travel service call completed.");
         return content;
     }

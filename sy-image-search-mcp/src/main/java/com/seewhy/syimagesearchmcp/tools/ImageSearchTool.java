@@ -1,7 +1,9 @@
 package com.seewhy.syimagesearchmcp.tools;
 
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
+import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import org.springframework.ai.tool.annotation.Tool;
@@ -41,6 +43,9 @@ public class ImageSearchTool {
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException("Pexels API key not configured. Set pexels.api-key or PEXELS_API_KEY.");
         }
+        if (query == null || query.isBlank()) {
+            throw new IllegalArgumentException("Image search query cannot be blank.");
+        }
         Map<String, String> headers = new HashMap<>();
         headers.put("Authorization", apiKey);
 
@@ -48,19 +53,35 @@ public class ImageSearchTool {
         Map<String, Object> params = new HashMap<>();
         params.put("query", query);
 
-        // 发送 GET 请求
-        String response = HttpUtil.createGet(API_URL)
+        String response;
+        try (HttpResponse httpResponse = HttpUtil.createGet(API_URL)
                 .addHeaders(headers)
                 .form(params)
-                .execute()
-                .body();
+                .setConnectionTimeout(8000)
+                .setReadTimeout(15000)
+                .execute()) {
+            if (httpResponse.getStatus() == 401 || httpResponse.getStatus() == 403) {
+                throw new IllegalStateException("Pexels API key was rejected.");
+            }
+            if (httpResponse.getStatus() == 429) {
+                throw new IllegalStateException("Pexels quota or rate limit was reached.");
+            }
+            if (httpResponse.getStatus() < 200 || httpResponse.getStatus() >= 300) {
+                throw new IllegalStateException("Pexels API returned HTTP " + httpResponse.getStatus() + ".");
+            }
+            response = httpResponse.body();
+        }
 
         // 解析响应JSON（假设响应结构包含"photos"数组，每个元素包含"medium"字段）
-        return JSONUtil.parseObj(response)
-                .getJSONArray("photos")
+        JSONArray photos = JSONUtil.parseObj(response).getJSONArray("photos");
+        if (photos == null || photos.isEmpty()) {
+            return List.of();
+        }
+        return photos
                 .stream()
                 .map(photoObj -> (JSONObject) photoObj)
                 .map(photoObj -> photoObj.getJSONObject("src"))
+                .filter(src -> src != null)
                 .map(photo -> photo.getStr("medium"))
                 .filter(StrUtil::isNotBlank)
                 .collect(Collectors.toList());

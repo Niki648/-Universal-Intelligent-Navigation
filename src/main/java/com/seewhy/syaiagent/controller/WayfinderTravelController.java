@@ -112,6 +112,10 @@ public class WayfinderTravelController {
                                    @RequestParam(required = false) String chatId) {
         validateMessage(message);
         String id = normalizeChatId(chatId);
+        if (wayfinderDemoService.isEnabled()) {
+            return wayfinderDemoService.demoChatStream(message, id)
+                    .doOnCancel(() -> log.info("Demo SSE stream cancelled for {}", id));
+        }
         return wayfinderTravelFacade.doChatByStream(message, id)
                 .doOnCancel(() -> log.info("SSE stream cancelled for {}", id))
                 .onErrorContinue((err, obj) ->

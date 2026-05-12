@@ -24,7 +24,7 @@ public class TravelChatService {
     }
 
     public String chat(String message, String chatId) {
-        log.info("用户[{}]提问: {}", chatId, message);
+        log.info("Travel chat request [{}], message chars={}", chatId, message == null ? 0 : message.length());
 
         ChatResponse chatResponse = chatClient
                 .prompt()
@@ -34,12 +34,12 @@ public class TravelChatService {
                 .call()
                 .chatResponse();
         String content = postProcessResponse(chatId, message, chatResponse.getResult().getOutput().getText());
-        log.info("AI回复[{}]: {}", chatId, content);
+        log.info("Travel chat response [{}], chars={}", chatId, content == null ? 0 : content.length());
         return content;
     }
 
     public Flux<String> streamChat(String message, String chatId) {
-        log.info("用户[{}]提问（流式）: {}", chatId, message);
+        log.info("Travel chat stream request [{}], message chars={}", chatId, message == null ? 0 : message.length());
 
         return chatClient
                 .prompt()

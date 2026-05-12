@@ -59,6 +59,10 @@ coverage/
 *.p12
 *.jks
 *.keystore
+.envrc
+secrets/
+*.p8
+*.crt
 
 ### 前端 ###
 node_modules/
@@ -74,6 +78,9 @@ temp/
 logs/
 *.tmp
 *.bak
+*.sqlite
+*.sqlite3
+*.db
 
 ### Demo artifacts and local downloads ###
 docs/screenshots/

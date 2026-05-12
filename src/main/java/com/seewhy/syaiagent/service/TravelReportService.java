@@ -25,7 +25,7 @@ public class TravelReportService {
     }
 
     public TravelReport generateReport(String message, String chatId) {
-        log.info("Generating travel report [{}]: {}", chatId, message);
+        log.info("Generating travel report [{}], message chars={}", chatId, message == null ? 0 : message.length());
         agentTraceService.record(chatId, AgentTraceStep.REPORT_GENERATION, AgentTraceStatus.STARTED, "Generating travel report.");
 
         TravelReport travelReport = chatClient
@@ -36,7 +36,8 @@ public class TravelReportService {
                 .call()
                 .entity(TravelReport.class);
 
-        log.info("Travel report generated [{}]: {}", chatId, travelReport.title());
+        log.info("Travel report generated [{}], title chars={}", chatId,
+                travelReport.title() == null ? 0 : travelReport.title().length());
         agentTraceService.record(chatId, AgentTraceStep.REPORT_GENERATION, AgentTraceStatus.COMPLETED, "Travel report generated.");
         return travelReport;
     }

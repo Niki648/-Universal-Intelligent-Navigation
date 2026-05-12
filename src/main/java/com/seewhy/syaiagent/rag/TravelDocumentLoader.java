@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StreamUtils;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,7 +38,10 @@ public class TravelDocumentLoader {
             Resource[] resources = resourcePatternResolver.getResources("classpath:document/*.md");
             for (Resource resource : resources) {
                 String filename = resource.getFilename();
-                String content = StreamUtils.copyToString(resource.getInputStream(), StandardCharsets.UTF_8);
+                String content;
+                try (InputStream inputStream = resource.getInputStream()) {
+                    content = StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
+                }
                 ParsedMarkdown parsed = parseMarkdown(content);
                 Map<String, Object> metadata = new LinkedHashMap<>(parsed.metadata());
                 metadata.putIfAbsent("filename", filename);

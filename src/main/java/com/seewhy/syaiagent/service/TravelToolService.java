@@ -29,7 +29,7 @@ public class TravelToolService {
     }
 
     public String chatWithTools(String message, String chatId) {
-        log.info("Travel tool chat [{}]: {}", chatId, message);
+        log.info("Travel tool chat [{}], message chars={}", chatId, message == null ? 0 : message.length());
         agentTraceService.record(chatId, AgentTraceStep.TOOL_CALL, AgentTraceStatus.STARTED, "Tool-enabled travel chat started.");
 
         ChatResponse chatResponse = chatClient
@@ -42,7 +42,7 @@ public class TravelToolService {
                 .chatResponse();
 
         String content = chatResponse.getResult().getOutput().getText();
-        log.info("Travel tool response [{}]: {}", chatId, content);
+        log.info("Travel tool response [{}], chars={}", chatId, content == null ? 0 : content.length());
         agentTraceService.record(chatId, AgentTraceStep.TOOL_CALL, AgentTraceStatus.COMPLETED, "Tool-enabled travel chat completed.");
         return content;
     }

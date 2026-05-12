@@ -12,7 +12,7 @@ import reactor.core.publisher.Flux;
 
 /**
  * 自定义日志 Advisor
- * 打印 info 级别日志、只输出单次用户提示词和 AI 回复的文本
+ * 只记录请求/响应长度，避免生产日志泄露 prompt 或模型输出。
  */
 @Slf4j
 public class MyLoggerAdvisor implements CallAdvisor, StreamAdvisor {
@@ -28,12 +28,13 @@ public class MyLoggerAdvisor implements CallAdvisor, StreamAdvisor {
 	}
 
 	private ChatClientRequest before(ChatClientRequest request) {
-		log.info("AI Request: {}", request.prompt());
+		log.debug("AI request prepared, prompt chars={}", String.valueOf(request.prompt()).length());
 		return request;
 	}
 
 	private void observeAfter(ChatClientResponse chatClientResponse) {
-		log.info("AI Response: {}", chatClientResponse.chatResponse().getResult().getOutput().getText());
+		String text = chatClientResponse.chatResponse().getResult().getOutput().getText();
+		log.debug("AI response received, chars={}", text == null ? 0 : text.length());
 	}
 
 	@Override

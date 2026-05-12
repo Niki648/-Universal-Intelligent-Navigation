@@ -4,18 +4,20 @@
   "title": "Java & AI Application Engineer",
   "role": "The Wayfinder",
   "location": "China",
-  "summary": "Backend-oriented AI application engineer building Wayfinder Guild into a runnable, explainable, and testable AI engineering portfolio.",
+  "summary": "Java 后端工程师，正在把支付系统中的稳定性、边界设计、状态流转、链路排障经验，迁移到 AI 应用后端、Agent、RAG、工具调用与可观测性工程中。",
   "focusAreas": [
     "Java backend architecture",
-    "Spring AI application development",
-    "Agent, RAG, and tool calling",
-    "Eval, trace, and guardrails",
-    "Full-stack productized demos"
+    "Payment OpenAPI & channel integration",
+    "Callback, signature, idempotency, routing",
+    "Spring AI, RAG & tool calling",
+    "Agent trace, eval & guardrails",
+    "Productized portfolio demos"
   ],
   "strengths": [
-    "Breaks complex AI capabilities into clear backend boundaries.",
-    "Values testability, observability, and demo reliability.",
-    "Balances product experience, system architecture, and maintainable code."
+    "能将复杂业务链路拆成清晰的后端边界。",
+    "熟悉支付渠道接入中的回调、验签、状态流转、幂等和排障。",
+    "重视可测试性、可观测性和演示稳定性。",
+    "能把 AI 能力产品化，而不是停留在 prompt demo。"
   ],
   "links": {
     "github": "",
@@ -23,8 +25,9 @@
     "email": ""
   },
   "stats": {
-    "backend": "Spring Boot 3.4 + Java 21",
-    "ai": "Spring AI + DeepSeek",
-    "portfolio": "Wayfinder Guild"
+    "backend": "Java 21 + Spring Boot 3.4",
+    "payment": "OpenAPI integration & callbacks",
+    "ai": "Spring AI + RAG + tool calling",
+    "portfolio": "Runnable demos + metadata API"
   }
 }

@@ -59,7 +59,7 @@ public class TravelRagService {
     }
 
     public String chatWithRag(String message, String chatId) {
-        log.info("Travel RAG query [{}] mode={}: {}", chatId, ragMode, message);
+        log.info("Travel RAG query [{}] mode={}, message chars={}", chatId, ragMode, message == null ? 0 : message.length());
         agentTraceService.record(chatId, AgentTraceStep.RAG_RETRIEVAL, AgentTraceStatus.STARTED,
                 "Preparing travel knowledge retrieval.", Map.of("mode", ragMode));
 
@@ -93,7 +93,7 @@ public class TravelRagService {
                     .chatResponse();
 
             String content = chatResponse.getResult().getOutput().getText();
-            log.info("Travel RAG response [{}]: {}", chatId, content);
+            log.info("Travel RAG response [{}], chars={}", chatId, content == null ? 0 : content.length());
             return content;
         } catch (RuntimeException ex) {
             String reason = "PgVector RAG chat failed: " + ex.getClass().getSimpleName();

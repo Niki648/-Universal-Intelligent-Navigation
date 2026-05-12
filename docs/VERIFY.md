@@ -66,6 +66,8 @@ Expected doctor output:
 [OK] rpg
 [OK] evals
 [OK] prompts
+[OK] rag docs
+[OK] naming
 ```
 
 ## 4. MCP Submodule Tests

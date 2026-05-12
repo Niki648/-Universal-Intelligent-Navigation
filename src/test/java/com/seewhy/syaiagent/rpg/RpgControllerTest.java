@@ -103,12 +103,12 @@ class RpgControllerTest {
 
         mockMvc.perform(get("/rpg/evals/rules"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(7)))
-                .andExpect(jsonPath("$[0].id").value("clarifying-question"));
+                .andExpect(jsonPath("$", hasSize(8)))
+                .andExpect(jsonPath("$[0].id").value("case-alignment"));
 
         mockMvc.perform(get("/rpg/evals/sample-result"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(7)))
-                .andExpect(jsonPath("$[0].rule").value("clarifying-question"));
+                .andExpect(jsonPath("$", hasSize(8)))
+                .andExpect(jsonPath("$[0].rule").value("case-alignment"));
     }
 }

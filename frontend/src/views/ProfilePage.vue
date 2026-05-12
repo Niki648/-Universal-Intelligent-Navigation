@@ -32,17 +32,17 @@
         </dl>
       </StarCard>
 
-      <StarCard title="Capability Tags" description="The practical engineering areas behind the RPG role.">
+      <StarCard title="Capability Tags" description="面试官可以从这些标签快速定位工程能力。">
         <TagList :items="profile.focusAreas || []" />
       </StarCard>
 
-      <StarCard title="Strengths" description="What the portfolio should communicate in interviews.">
+      <StarCard title="Strengths" description="这个作品集希望证明的能力。">
         <ul class="feature-list">
           <li v-for="item in profile.strengths || []" :key="item">{{ item }}</li>
         </ul>
       </StarCard>
 
-      <StarCard title="Journey Notes" description="Experience and achievements will be expanded here as the portfolio matures.">
+      <StarCard title="Journey Notes" description="从支付链路到 AI 应用后端的工程迁移路径。">
         <div class="milestone-list">
           <div v-for="item in milestones" :key="item.title" class="milestone">
             <strong>{{ item.title }}</strong>
@@ -66,17 +66,26 @@ const FALLBACK_PROFILE = {
   title: 'Java & AI Application Engineer',
   role: 'The Wayfinder',
   location: 'China',
-  summary: 'A backend-oriented AI application engineer building Wayfinder Guild into a runnable Agent engineering portfolio.',
-  focusAreas: ['Java Backend', 'Spring AI', 'Agent Workflows', 'RAG', 'Eval', 'Trace', 'Guardrails'],
+  summary: 'Java 后端工程师，正在把支付系统中的稳定性、边界设计、状态流转、链路排障经验，迁移到 AI 应用后端、Agent、RAG、工具调用与可观测性工程中。',
+  focusAreas: [
+    'Java backend architecture',
+    'Payment OpenAPI & channel integration',
+    'Callback, signature, idempotency, routing',
+    'Spring AI, RAG & tool calling',
+    'Agent trace, eval & guardrails',
+    'Productized portfolio demos'
+  ],
   strengths: [
-    'Turns complex AI capabilities into clear backend service boundaries.',
-    'Values testability, observability, and demo-ready product experience.',
-    'Connects architecture decisions with user-facing product stories.'
+    '能将复杂业务链路拆成清晰的后端边界。',
+    '熟悉支付渠道接入中的回调、验签、状态流转、幂等和排障。',
+    '重视可测试性、可观测性和演示稳定性。',
+    '能把 AI 能力产品化，而不是停留在 prompt demo。'
   ],
   stats: {
-    backend: 'Spring Boot 3.4 + Java 21',
-    ai: 'Spring AI + DeepSeek',
-    portfolio: 'Wayfinder Guild'
+    backend: 'Java 21 + Spring Boot 3.4',
+    payment: 'OpenAPI integration & callbacks',
+    ai: 'Spring AI + RAG + tool calling',
+    portfolio: 'Runnable demos + metadata API'
   }
 }
 
@@ -89,9 +98,9 @@ export default {
       loading: true,
       error: false,
       milestones: [
-        { title: 'Agentic Backend', text: 'Travel planning backend split into chat, plan, RAG, tool, trace, eval, and guardrail modules.' },
-        { title: 'Portfolio System', text: 'RPG metadata API and Phaser/Vue frontend turn engineering capabilities into an explorable town.' },
-        { title: 'Interview Narrative', text: 'Each building explains a real AI engineering capability, not just a visual theme.' }
+        { title: 'Payment Engineering', text: '跨境支付 OpenAPI、第三方渠道接入、收银台联调、异步回调、渠道路由和日志排障。' },
+        { title: 'Agentic Backend', text: '旅行规划后端拆分为 chat、plan、RAG、tool、trace、eval、guardrail 等模块。' },
+        { title: 'Portfolio System', text: '用 RPG 地图和 metadata API，把工程能力变成可探索、可演示的作品集。' }
       ]
     }
   },

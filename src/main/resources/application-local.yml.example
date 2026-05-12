@@ -5,6 +5,7 @@
 #   DB_URL, DB_USERNAME, DB_PASSWORD
 #   DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_CHAT_MODEL
 #   SEARCH_PROVIDER, TAVILY_API_KEY
+#   WAYFINDER_DEMO_ENABLED=false（本地 Owner Live 模式）
 
 spring:
   datasource:
@@ -25,3 +26,23 @@ search:
 
 tavily:
   api-key: ${TAVILY_API_KEY:}
+
+wayfinder:
+  demo:
+    enabled: ${WAYFINDER_DEMO_ENABLED:false}
+  cors:
+    allowed-origin-patterns: ${WAYFINDER_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:5173}
+
+springdoc:
+  api-docs:
+    enabled: ${SPRINGDOC_API_DOCS_ENABLED:true}
+  swagger-ui:
+    enabled: ${SPRINGDOC_SWAGGER_UI_ENABLED:true}
+
+knife4j:
+  enable: ${KNIFE4J_ENABLE:true}
+
+logging:
+  level:
+    org.springframework.ai: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_AI:DEBUG}
+    com.seewhy.syaiagent: ${LOGGING_LEVEL_COM_SEEWHY_SYAIAGENT:INFO}

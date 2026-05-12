@@ -33,7 +33,7 @@ public class ToolRegistration {
     public ToolCallback[] allTools() {
         FileOperationTool fileOperationTool = new FileOperationTool(guardrailService);
         WebSearchTool webSearchTool = new WebSearchTool(searchProvider());
-        WebScrapingTool webScrapingTool = new WebScrapingTool();
+        WebScrapingTool webScrapingTool = new WebScrapingTool(guardrailService);
         ResourceDownloadTool resourceDownloadTool = new ResourceDownloadTool(guardrailService);
         TerminalOperationTool terminalOperationTool = new TerminalOperationTool(guardrailService);
         PDFGenerationTool pdfGenerationTool = new PDFGenerationTool(guardrailService);

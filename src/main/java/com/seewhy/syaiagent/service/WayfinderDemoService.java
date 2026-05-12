@@ -1,27 +1,45 @@
 package com.seewhy.syaiagent.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seewhy.syaiagent.model.RagExplainResponse;
 import com.seewhy.syaiagent.model.TravelPlan;
+import com.seewhy.syaiagent.model.rpg.RpgEvalRunResponse;
 import com.seewhy.syaiagent.model.rpg.RpgEvalSampleResult;
 import com.seewhy.syaiagent.trace.AgentTraceEvent;
-import com.seewhy.syaiagent.trace.AgentTraceStatus;
-import com.seewhy.syaiagent.trace.AgentTraceStep;
+import com.seewhy.syaiagent.eval.TravelEvalRuleResult;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
-import java.math.BigDecimal;
-import java.time.Instant;
+import java.io.IOException;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 @Service
 public class WayfinderDemoService {
 
-    private final boolean enabled;
+    private static final String DEMO_TRAVEL_PLAN_RESOURCE = "rpg/demo-travel-plan.json";
+    private static final String DEMO_TRAVEL_TRACE_RESOURCE = "rpg/demo-travel-trace.json";
+    private static final String DEMO_TRAVEL_SCORE_RESOURCE = "rpg/demo-travel-score.json";
 
-    public WayfinderDemoService(@Value("${wayfinder.demo.enabled:false}") boolean enabled) {
+    private final boolean enabled;
+    private final TravelPlan demoTravelPlan;
+    private final List<AgentTraceEvent> demoTraceEvents;
+    private final List<RpgEvalSampleResult> demoEvalResults;
+
+    @Autowired
+    public WayfinderDemoService(@Value("${wayfinder.demo.enabled:false}") boolean enabled,
+                                ObjectMapper objectMapper) {
         this.enabled = enabled;
+        this.demoTravelPlan = readDemoTravelPlan(objectMapper);
+        this.demoTraceEvents = readDemoTraceEvents(objectMapper);
+        this.demoEvalResults = readDemoEvalResults(objectMapper);
+    }
+
+    public WayfinderDemoService(boolean enabled) {
+        this(enabled, new ObjectMapper().findAndRegisterModules());
     }
 
     public boolean isEnabled() {
@@ -29,35 +47,19 @@ public class WayfinderDemoService {
     }
 
     public TravelPlan demoTravelPlan() {
-        return new TravelPlan(
-                "A relaxed seven-day Japan family trip with a clear budget, slower pacing, and visible risk reminders.",
-                "Japan",
-                "Shanghai",
-                7,
-                3,
-                new TravelPlan.Budget(
-                        BigDecimal.valueOf(20000),
-                        "CNY",
-                        List.of(
-                                new TravelPlan.BudgetItem("Flights", BigDecimal.valueOf(7500), "Estimate for three travelers."),
-                                new TravelPlan.BudgetItem("Hotels", BigDecimal.valueOf(6300), "Family-friendly midrange stays."),
-                                new TravelPlan.BudgetItem("Local transport and food", BigDecimal.valueOf(4200), "Flexible daily estimate.")
-                        ),
-                        "Demo estimate only. Real prices require current flight and hotel checks."
-                ),
-                List.of(
-                        new TravelPlan.ItineraryDay(1, "Arrival and easy settling in",
-                                List.of(new TravelPlan.Activity("Afternoon", "Arrive in Osaka", "Check in, short neighborhood walk, early rest.", "Osaka", "medium", List.of("Keep the first day light."))),
-                                List.of("Simple local dinner"), "Osaka family hotel", "Airport rail", "relaxed", List.of("Avoid late-night transfers.")),
-                        new TravelPlan.ItineraryDay(2, "Kyoto classic route",
-                                List.of(new TravelPlan.Activity("Morning", "Fushimi Inari", "Visit early and choose a partial route for parents.", "Kyoto", "low", List.of("Stop before the full mountain trail if tired."))),
-                                List.of("Kyoto home-style lunch"), "Kyoto hotel", "JR/local train", "relaxed", List.of("Check weather and walking distance."))
-                ),
-                List.of("JR/local train", "Taxi fallback for parents when tired"),
-                List.of("Midrange family hotel near transit"),
-                List.of("Weather, hotel prices, opening hours, and visa policies may change; confirm official sources before booking."),
-                List.of("Reduce Kyoto temples if parents prefer fewer walks.", "Swap one city day for an onsen rest day."),
-                List.of("family-trip-planning", "japan-travel", "budget-travel", "relaxed-travel")
+        return demoTravelPlan;
+    }
+
+    public Flux<String> demoChatStream(String message, String chatId) {
+        return Flux.just(
+                "已收到你的旅行需求：上海出发，5 天家庭轻松游，目的地 Kyoto，预算 15000 CNY。",
+                "\n\n我会先抽取 destination、departure、days、budget 和 travel style；当前请求缺少 travelers，所以预算会保留人数假设与风险提示。",
+                "\n已加载 Skills：family-trip-planning、japan-travel、relaxed-travel、budget-travel。",
+                "\n随后进入 requirement -> RAG -> tool/plan -> guardrail -> trace 链路，生成可渲染的 TravelPlan。",
+                "\n\n当前 demo mode 使用一次 live run 冻结的稳定样例：Structured Plan 为 Kyoto 5-day fixture，当前评分样例为 88/100，Trace 来自同一次真实链路。",
+                "\n如需重新体验真实模型输出，可以关闭 demo mode 并配置有效的 DeepSeek API key。",
+                "\n\n",
+                "[DONE]"
         );
     }
 
@@ -66,30 +68,81 @@ public class WayfinderDemoService {
     }
 
     public List<AgentTraceEvent> demoTrace(String chatId) {
-        String id = chatId == null || chatId.isBlank() ? "demo-japan-family" : chatId;
-        Instant base = Instant.parse("2026-05-10T08:00:00Z");
-        return List.of(
-                event(id, AgentTraceStep.USER_INTENT_RECOGNITION, AgentTraceStatus.COMPLETED, "Recognized a relaxed Japan family trip request.", base, Map.of("travelers", 3, "destination", "Japan")),
-                event(id, AgentTraceStep.SKILL_LOADING, AgentTraceStatus.COMPLETED, "Loaded matching travel skills.", base.plusSeconds(2), Map.of("loadedSkills", List.of("family-trip-planning", "japan-travel", "budget-travel", "relaxed-travel"))),
-                event(id, AgentTraceStep.ITINERARY_GENERATION, AgentTraceStatus.COMPLETED, "Generated a structured itinerary draft.", base.plusSeconds(5), Map.of("days", 7)),
-                event(id, AgentTraceStep.BUDGET_CHECK, AgentTraceStatus.COMPLETED, "Budget structure checked.", base.plusSeconds(7), Map.of("currency", "CNY", "estimate", 20000)),
-                event(id, AgentTraceStep.RISK_CHECK, AgentTraceStatus.COMPLETED, "Risk reminders and uncertainty wording applied.", base.plusSeconds(9), Map.of("riskCount", 1))
-        );
+        String id = chatId == null || chatId.isBlank() ? "demo-kyoto-family" : chatId;
+        return demoTraceEvents.stream()
+                .map(event -> new AgentTraceEvent(
+                        event.traceId(),
+                        id,
+                        event.step(),
+                        event.status(),
+                        event.message(),
+                        event.metadata(),
+                        event.timestamp()
+                ))
+                .toList();
     }
 
     public List<RpgEvalSampleResult> demoEvalResults() {
-        return List.of(
-                new RpgEvalSampleResult("clarifying-question", true, 10, 10, "No follow-up required for the Japan family case."),
-                new RpgEvalSampleResult("structured-itinerary", true, 20, 20, "TravelPlan contains itineraryDays for UI rendering."),
-                new RpgEvalSampleResult("budget-reasonableness", true, 15, 15, "Budget total, currency, and itemized estimates are present."),
-                new RpgEvalSampleResult("risk-reminders", true, 15, 15, "Visa, weather, price, and schedule uncertainty are surfaced."),
-                new RpgEvalSampleResult("unsafe-claims", true, 20, 20, "No absolute safety, visa, weather, or price guarantees detected."),
-                new RpgEvalSampleResult("disallowed-tools", true, 10, 10, "No terminal, file-write, or resource-download calls observed."),
-                new RpgEvalSampleResult("expected-skills", true, 10, 10, "Expected skill IDs are present in loadedSkills.")
-        );
+        return demoEvalResults;
     }
 
-    private AgentTraceEvent event(String chatId, AgentTraceStep step, AgentTraceStatus status, String message, Instant timestamp, Map<String, Object> metadata) {
-        return new AgentTraceEvent(UUID.randomUUID().toString(), chatId, step, status, message, metadata, timestamp);
+    private TravelPlan readDemoTravelPlan(ObjectMapper objectMapper) {
+        ClassPathResource resource = new ClassPathResource(DEMO_TRAVEL_PLAN_RESOURCE);
+        try {
+            return objectMapper.readValue(resource.getInputStream(), TravelPlan.class);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to load demo travel plan resource: " + DEMO_TRAVEL_PLAN_RESOURCE, ex);
+        }
+    }
+
+    private List<AgentTraceEvent> readDemoTraceEvents(ObjectMapper objectMapper) {
+        ClassPathResource resource = new ClassPathResource(DEMO_TRAVEL_TRACE_RESOURCE);
+        try {
+            return objectMapper.readValue(resource.getInputStream(), new TypeReference<>() {
+            });
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to load demo travel trace resource: " + DEMO_TRAVEL_TRACE_RESOURCE, ex);
+        }
+    }
+
+    private List<RpgEvalSampleResult> readDemoEvalResults(ObjectMapper objectMapper) {
+        ClassPathResource resource = new ClassPathResource(DEMO_TRAVEL_SCORE_RESOURCE);
+        try {
+            RpgEvalRunResponse run = objectMapper.readValue(resource.getInputStream(), RpgEvalRunResponse.class);
+            return List.of(
+                    mappedSample(run, "case-alignment", "request-coverage", 20),
+                    mappedSample(run, "clarifying-question", "missing-info-honesty", 10),
+                    mappedSample(run, "structured-itinerary", "structured-itinerary", 15),
+                    mappedSample(run, "budget-reasonableness", "budget-grounding", 15),
+                    mappedSample(run, "risk-reminders", "risk-reminders", 15),
+                    mappedSample(run, "unsafe-claims", "safe-claims", 15),
+                    mappedSample(run, "disallowed-tools", "tool-boundary", 5),
+                    new RpgEvalSampleResult(
+                            "expected-skills",
+                            true,
+                            5,
+                            5,
+                            String.join(", ", demoTravelPlan.loadedSkills()) + " are loaded in the frozen live TravelPlan fixture."
+                    )
+            );
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to load demo travel score resource: " + DEMO_TRAVEL_SCORE_RESOURCE, ex);
+        }
+    }
+
+    private RpgEvalSampleResult mappedSample(RpgEvalRunResponse run, String sampleRule, String fixtureRule, int sampleMaxScore) {
+        TravelEvalRuleResult rule = run.result().rules().stream()
+                .filter(candidate -> candidate.rule().equals(fixtureRule))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Missing rule in demo travel score fixture: " + fixtureRule));
+        int score = scaleScore(rule.score(), rule.maxScore(), sampleMaxScore);
+        return new RpgEvalSampleResult(sampleRule, rule.passed(), score, sampleMaxScore, rule.message());
+    }
+
+    private int scaleScore(int score, int maxScore, int targetMaxScore) {
+        if (maxScore <= 0) {
+            return 0;
+        }
+        return Math.min(targetMaxScore, Math.round(score * targetMaxScore / (float) maxScore));
     }
 }

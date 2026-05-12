@@ -366,6 +366,8 @@ export default {
       return err?.response?.data?.message || err?.message || 'The eval run endpoint is unavailable.'
     },
     sampleForRule(ruleId) {
+      const result = this.sampleResults.find((item) => item.rule === ruleId)
+      if (result?.message) return result.message
       const samples = {
         'case-alignment': 'Pass 20/20 when destination, days, travelers, budget, and expected skills match the selected case.',
         'clarifying-question': 'Pass 10/10 when missing destination, days, travelers, or budget are surfaced as follow-up questions.',
