@@ -17,8 +17,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+
 /**
- * PDF 生成工具（支持中文：优先 classpath 字体，并对 Markdown 做简易转纯文）
+ * PDF generation tool with safe file names and basic Markdown-to-text cleanup.
  */
 @Component
 public class PDFGenerationTool {
@@ -48,14 +49,12 @@ public class PDFGenerationTool {
         try {
             Path filePath = guardrailService.validateWritableFileName(fileName, Path.of(fileDir));
             FileUtil.mkdir(fileDir);
-            // 将 Markdown 风格转为纯文，避免 PDF 里出现 ##、- 等符号
             String plainContent = markdownToPlain(content);
             try (PdfWriter writer = new PdfWriter(filePath.toString());
                  PdfDocument pdf = new PdfDocument(writer);
                  Document document = new Document(pdf)) {
                 PdfFont font = resolveChineseFont();
                 document.setFont(font);
-                // 按行写入，保证换行和段落清晰
                 String[] lines = plainContent.split("\\r?\\n");
                 for (String line : lines) {
                     String trimmed = line.trim();
@@ -73,7 +72,6 @@ public class PDFGenerationTool {
     }
 
     private PdfFont resolveChineseFont() throws IOException {
-        // 1) 优先 classpath 下的中文字体（见 src/main/resources/fonts/README.txt）
         for (String resource : FONT_RESOURCE_CANDIDATES) {
             try (InputStream is = getClass().getResourceAsStream(resource)) {
                 if (is != null) {
@@ -83,18 +81,20 @@ public class PDFGenerationTool {
                     return PdfFontFactory.createFont(temp.toAbsolutePath().toString(),
                             PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED);
                 }
-            } catch (Exception ignore) { /* try next */ }
+            } catch (Exception ignore) {
+                // Try the next configured font.
+            }
         }
-        // 2) iText font-asian 内置中文字体（依赖已改为 runtime，可正确显示中文）
         for (String[] nameEncoding : new String[][]{
                 {"STSongStd-Light", "UniGB-UCS2-H"},
                 {"STSong-Light", "UniGB-UCS2-H"}
         }) {
             try {
                 return PdfFontFactory.createFont(nameEncoding[0], nameEncoding[1]);
-            } catch (Exception ignore) { /* try next */ }
+            } catch (Exception ignore) {
+                // Try the next iText Asian font alias.
+            }
         }
-        // 3) Windows 系统字体目录
         String winRoot = System.getenv("SystemRoot");
         if (winRoot != null && !winRoot.isEmpty()) {
             String[] winCandidates = {
@@ -108,23 +108,25 @@ public class PDFGenerationTool {
                     try {
                         String fontPath = path.endsWith(".ttc") ? path + ",0" : path;
                         return PdfFontFactory.createFont(fontPath, PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED);
-                    } catch (Exception ignore) { }
+                    } catch (Exception ignore) {
+                        // Try the next Windows font.
+                    }
                 }
             }
         }
-        // 4) 退回到默认字体（中文会乱码，仅作兜底）
         return PdfFontFactory.createFont();
     }
 
-    /** 简易 Markdown 转纯文：去掉 ##、###、列表符 -，保留换行与层次 */
     private String markdownToPlain(String content) {
-        if (content == null) return "";
-        String s = content
-                .replaceAll("(?m)^#+\\s*", "")   // 行首 # ## ###
-                .replaceAll("(?m)^[-*]\\s+", "  • ")  // 行首 - 或 *
-                .replaceAll("\\*\\*\\*\\*\\s*", "")   // ****
-                .replaceAll("\\*\\*([^*]+)\\*\\*", "$1")  // **粗体** -> 粗体
-                .replaceAll("\\|\\s*\\|", " ");
-        return s.trim();
+        if (content == null) {
+            return "";
+        }
+        return content
+                .replaceAll("(?m)^#+\\s*", "")
+                .replaceAll("(?m)^[-*]\\s+", "  - ")
+                .replaceAll("\\*\\*\\*\\*\\s*", "")
+                .replaceAll("\\*\\*([^*]+)\\*\\*", "$1")
+                .replaceAll("\\|\\s*\\|", " ")
+                .trim();
     }
 }

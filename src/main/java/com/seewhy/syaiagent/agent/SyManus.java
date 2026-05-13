@@ -40,9 +40,10 @@ public class SyManus extends ToolCallAgent {
                 For simple live demo tasks such as an allowlisted echo command, a short file write, or a small PDF note, call exactly one appropriate tool, give one short summary, then terminate.
                 If a tool is blocked or fails, explain the specific failure once, then terminate.
 
-                Resume intent routing:
-                - If the latest user message asks for a backend Java resume, Java backend resume, or resume PDF without explicit search words, treat it as a local generation task. Use the file or PDF tool to generate the resume artifact.
-                - Examples that are local generation tasks: "生成后端Java简历", "生成一个后端 Java 简历 PDF", "java后端简历", "写一份后端Java简历".
+                Portfolio intent routing:
+                - If the latest user message asks for a generic Java/backend resume or resume PDF, do not create another toy resume.
+                - Explain briefly that the stable Portfolio Brief Pack is the interview-ready artifact demo for this project.
+                - Generate a custom file or PDF only when the user asks for an explicit live tool task and provides concrete content to write.
                 - Use web search only when the latest user explicitly asks to search, look up, find, research, query current external web information, templates, examples, or model resumes.
                 - Do not search or download arbitrary resumes/CVs/private files unless the user provides a concrete URL and the guardrail allows it.
 
@@ -51,7 +52,7 @@ public class SyManus extends ToolCallAgent {
                 - Use only letters, digits, spaces, dot, underscore, and hyphen in generated file names. Chinese letters are allowed when needed, but avoid symbols.
                 - Do not use + / \\ : * ? " < > | or other punctuation in generated file names.
                 - Normalize technology names in file names: C++ -> Cpp, C# -> CSharp, .NET -> DotNet, Node.js -> NodeJs.
-                - For Chinese resume requests, prefer safe ASCII file names such as JavaBackendResume.pdf, CppBackendResume.pdf, CSharpBackendResume.pdf, or DotNetBackendResume.pdf.
+                - For requested resume file names, prefer safe ASCII names such as JavaBackendResume.pdf, CppBackendResume.pdf, CSharpBackendResume.pdf, or DotNetBackendResume.pdf.
 
                 Never invent file paths. Do not expose local server file system paths to the user.
                 When a generated file is registered, refer to the file by name and rely on the generated file link.
@@ -71,7 +72,7 @@ public class SyManus extends ToolCallAgent {
                 If a file or PDF tool fails only because the generated file name contains unsafe characters, retry once with a normalized safe file name such as CppBackendResume.pdf.
                 If the current tool result is blocked or failed, explain that specific result once, call the terminate tool, and stop.
                 Do not recommend downloads, image generation, PDF generation, web search, or other tasks unless the latest user message requested them.
-                If the latest user asks for a Java/backend resume without explicit search words, generate it locally instead of calling web search.
+                If the latest user asks for a generic Java/backend resume without concrete content, point them to the Portfolio Brief Pack instead of generating a toy resume.
                 For C++, C#, .NET, and Node.js resume file names, normalize them as Cpp, CSharp, DotNet, and NodeJs before calling file or PDF tools.
                 Before each step, check whether the step directly serves the latest user message. If not, terminate.
                 Do not expose local server file system paths. Refer to generated files by name.

@@ -126,7 +126,6 @@ public class SkillLoaderService {
 
     private boolean matches(Skill skill, String normalizedInput) {
         return containsAny(normalizedInput, skill.triggers())
-                || containsAny(normalizedInput, skill.tags())
                 || normalizedInput.contains(normalize(skill.id()));
     }
 

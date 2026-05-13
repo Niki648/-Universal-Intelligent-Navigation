@@ -14,6 +14,7 @@ import com.seewhy.syaiagent.model.RagExplainResponse;
 import com.seewhy.syaiagent.model.TravelPlan;
 import com.seewhy.syaiagent.model.TravelPlanRequest;
 import com.seewhy.syaiagent.model.TravelReport;
+import com.seewhy.syaiagent.model.WayfinderDemoStatusResponse;
 import com.seewhy.syaiagent.service.DemoArtifactService;
 import com.seewhy.syaiagent.service.SseEmitterStreamService;
 import com.seewhy.syaiagent.service.SyManusArtifactLinkService;
@@ -39,11 +40,15 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.beans.factory.annotation.Value;
 import reactor.core.publisher.Flux;
 
 import org.springframework.http.HttpStatus;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/travel")
@@ -67,6 +72,18 @@ public class WayfinderTravelController {
     private final SyManusDemoToolService syManusDemoToolService;
     private final SyManusArtifactLinkService syManusArtifactLinkService;
     private final ObjectMapper objectMapper;
+
+    @Value("${spring.ai.openai.api-key:demo-disabled}")
+    private String modelApiKey = "demo-disabled";
+
+    @Value("${search.provider:disabled}")
+    private String searchProviderName = "disabled";
+
+    @Value("${tavily.api-key:}")
+    private String tavilyApiKey = "";
+
+    @Value("${pexels.api-key:}")
+    private String pexelsApiKey = "";
 
     public WayfinderTravelController(WayfinderTravelFacade wayfinderTravelFacade,
                                      ToolCallback[] allTools,
@@ -102,6 +119,26 @@ public class WayfinderTravelController {
         String chatId = normalizeChatId(request.getChatId());
         String response = wayfinderTravelFacade.doChat(request.getMessage(), chatId);
         return new ChatResponse(chatId, response);
+    }
+
+    @GetMapping("/demo-status")
+    public WayfinderDemoStatusResponse demoStatus() {
+        boolean demoMode = wayfinderDemoService.isEnabled();
+        boolean liveManusAvailable = !demoMode
+                && chatModel != null
+                && allTools != null
+                && allTools.length > 0
+                && isConfiguredSecret(modelApiKey);
+        boolean searchAvailable = !demoMode
+                && "tavily".equalsIgnoreCase(blankToEmpty(searchProviderName))
+                && isConfiguredSecret(tavilyApiKey);
+        boolean imageSearchAvailable = !demoMode && isConfiguredSecret(pexelsApiKey);
+        return new WayfinderDemoStatusResponse(
+                demoMode,
+                liveManusAvailable,
+                searchAvailable,
+                imageSearchAvailable
+        );
     }
 
     /**
@@ -162,11 +199,64 @@ public class WayfinderTravelController {
                                       @RequestParam(required = false) String chatId) {
         validateMessage(message);
         String id = normalizeChatId(chatId);
+        if (wayfinderDemoService.isEnabled()) {
+            return demoManusBoundaryEmitter(message, true);
+        }
+        if (chatModel == null || allTools == null || allTools.length == 0) {
+            return demoManusBoundaryEmitter(message, false);
+        }
         SyManus agent = new SyManus(allTools, chatModel, syManusArtifactLinkService);
         agent.setConversationChatId(id);
         agent.setConversationChatMemory(manusChatMemory);
         agent.setArtifactMarkerFormatter(this::formatManusArtifactMarker);
         return agent.runStream(message);
+    }
+
+    private SseEmitter demoManusBoundaryEmitter(String message, boolean publicDemoMode) {
+        SseEmitter emitter = new SseEmitter(30_000L);
+        CompletableFuture.runAsync(() -> {
+            try {
+                emitter.send(liveToolBoundaryMessage(message, publicDemoMode));
+                emitter.send("__DONE__");
+                emitter.complete();
+            } catch (IOException e) {
+                log.debug("Could not send SyManus live boundary message: {}", e.getMessage());
+                emitter.complete();
+            }
+        });
+        return emitter;
+    }
+
+    private String liveToolBoundaryMessage(String message, boolean publicDemoMode) {
+        StringBuilder text = new StringBuilder();
+        if (publicDemoMode) {
+            text.append("Current public demo mode keeps Live Tool Tasks behind a configuration boundary. ");
+        } else {
+            text.append("Live Tool Tasks are not configured in this backend session. ");
+        }
+        text.append("They use the real SyManus ReAct loop and need a configured model/API key and any required external services. ");
+        text.append("Use Stable Engineering Demos above for local, repeatable project checks and artifacts.");
+        if (looksLikeImageTask(message)) {
+            text.append("\n\nImage search depends on Pexels API key and external network; unavailable in this demo environment.");
+        }
+        return text.toString();
+    }
+
+    private boolean looksLikeImageTask(String message) {
+        String value = String.valueOf(message).toLowerCase();
+        return value.contains("image") || value.contains("photo") || value.contains("picture")
+                || value.contains("pexels") || value.contains("\u56fe\u7247") || value.contains("\u7167\u7247");
+    }
+
+    private boolean isConfiguredSecret(String value) {
+        String normalized = blankToEmpty(value).toLowerCase();
+        return !normalized.isBlank()
+                && !"demo-disabled".equals(normalized)
+                && !normalized.startsWith("your-");
+    }
+
+    private String blankToEmpty(String value) {
+        return value == null ? "" : value.trim();
     }
 
     @PostMapping("/manus/demo-tool")
@@ -289,10 +379,10 @@ public class WayfinderTravelController {
         try {
             DemoArtifactService.ArtifactResource artifact = demoArtifactService.resolve(artifactId);
             ContentDisposition disposition = (attachment ? ContentDisposition.attachment() : ContentDisposition.inline())
-                    .filename(artifact.fileName())
+                    .filename(artifact.fileName(), StandardCharsets.UTF_8)
                     .build();
             return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(artifact.mimeType()))
+                    .contentType(artifactMediaType(artifact))
                     .contentLength(artifact.size())
                     .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
                     .header(HttpHeaders.CACHE_CONTROL, "no-store")
@@ -302,6 +392,14 @@ public class WayfinderTravelController {
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
         }
+    }
+
+    private MediaType artifactMediaType(DemoArtifactService.ArtifactResource artifact) {
+        MediaType mediaType = MediaType.parseMediaType(artifact.mimeType());
+        if (MediaType.TEXT_PLAIN.includes(mediaType)) {
+            return new MediaType(MediaType.TEXT_PLAIN, StandardCharsets.UTF_8);
+        }
+        return mediaType;
     }
 
     private String formatManusArtifactMarker(DemoArtifactResponse artifact) {

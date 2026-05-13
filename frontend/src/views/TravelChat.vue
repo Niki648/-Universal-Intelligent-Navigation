@@ -62,7 +62,7 @@
           v-if="planLoading"
           type="loading"
           title="Planning voyage"
-          message="The structured TravelPlan can take 30-90 seconds when the live model is composing itinerary, budget, risks, and loaded Skills."
+          :message="planLoadingMessage"
         />
 
         <StateBlock v-if="planError" type="error" title="Plan request failed" :message="planError" />
@@ -203,7 +203,7 @@
 
           <div class="card-actions">
             <router-link :to="{ path: '/trace', query: { chatId: planChatId } }">
-              View this Agent voyage trace
+              {{ traceLinkLabel }}
             </router-link>
           </div>
         </div>
@@ -221,7 +221,12 @@ import TagList from '../components/common/TagList.vue'
 import StateBlock from '../components/common/StateBlock.vue'
 
 const DEFAULT_PLAN_MESSAGE = 'Plan a relaxed 5-day family trip from Shanghai to Kyoto with a 15000 CNY budget.'
-const STRUCTURED_PLAN_GUARDRAIL = 'Return a structured TravelPlan with daily itinerary, transportation, lodging assumptions, budget breakdown, family-friendly notes, and risks. Do not invent traveler count if the user did not specify it. If travelers are unknown, set travelers to null and only note that the budget should be adjusted once the traveler count is known.'
+const DEFAULT_DEMO_STATUS = {
+  demoMode: true,
+  liveManusAvailable: false,
+  searchAvailable: false,
+  imageSearchAvailable: false
+}
 
 export default {
   name: 'TravelChat',
@@ -240,7 +245,8 @@ export default {
       planSessionPoller: null,
       scoreLoading: false,
       scoreError: '',
-      scoreResult: null
+      scoreResult: null,
+      demoStatus: { ...DEFAULT_DEMO_STATUS }
     }
   },
   computed: {
@@ -287,7 +293,7 @@ export default {
       return this.extractDeparture(this.planMessage) || this.plan?.departure || ''
     },
     requestMessage() {
-      return `${this.planMessage.trim()} ${STRUCTURED_PLAN_GUARDRAIL}`
+      return this.planMessage.trim()
     },
     chatDraftActionLabel() {
       return this.chatDraftLanguage === 'zh' ? '生成结构化计划' : 'Generate Structured Plan'
@@ -300,15 +306,35 @@ export default {
       return language === 'zh'
         ? '结构化计划正在生成中，聊天回复可能稍慢。'
         : 'Structured plan is generating; chat replies may be slower.'
+    },
+    planLoadingMessage() {
+      if (this.demoStatus.demoMode) {
+        return 'Demo mode is returning the frozen TravelPlan fixture and its matching trace.'
+      }
+      return 'The structured TravelPlan can take 30-90 seconds when the live model is composing itinerary, budget, risks, and loaded Skills.'
+    },
+    traceLinkLabel() {
+      if (this.demoStatus.demoMode) return 'View demo voyage trace'
+      if (this.demoStatus.liveManusAvailable) return 'View this live Agent trace'
+      return 'View trace fixture'
     }
   },
   mounted() {
     this.restorePlanSession()
+    this.fetchDemoStatus()
   },
   beforeUnmount() {
     this.stopPlanSessionPolling()
   },
   methods: {
+    async fetchDemoStatus() {
+      try {
+        const { data } = await api.get('/travel/demo-status')
+        this.demoStatus = { ...DEFAULT_DEMO_STATUS, ...data }
+      } catch (error) {
+        this.demoStatus = { ...DEFAULT_DEMO_STATUS }
+      }
+    },
     async generatePlan() {
       this.planLoading = true
       this.planError = ''
