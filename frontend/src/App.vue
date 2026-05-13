@@ -27,6 +27,7 @@
         <button v-if="ownerEnabled" type="button" class="owner-clear-button" @click="removeOwnerToken">
           Clear
         </button>
+        <small v-if="ownerNotice">{{ ownerNotice }}</small>
       </form>
     </header>
     <main>
@@ -36,35 +37,45 @@
 </template>
 
 <script>
-import { clearOwnerToken, getOwnerToken, hasOwnerToken, setOwnerToken } from './api'
+import { clearOwnerToken, getOwnerToken, isOwnerVerified, setOwnerToken, validateOwnerToken } from './api'
 
 export default {
   name: 'App',
   data() {
     return {
       ownerTokenInput: '',
-      ownerEnabled: hasOwnerToken()
+      ownerEnabled: isOwnerVerified(),
+      ownerNotice: ''
     }
   },
   mounted() {
     this.ownerTokenInput = getOwnerToken()
     window.addEventListener('wayfinder-owner-token-changed', this.refreshOwnerState)
+    validateOwnerToken()
   },
   beforeUnmount() {
     window.removeEventListener('wayfinder-owner-token-changed', this.refreshOwnerState)
   },
   methods: {
-    saveOwnerToken() {
+    async saveOwnerToken() {
       setOwnerToken(this.ownerTokenInput)
-      this.refreshOwnerState()
+      this.ownerNotice = 'Verifying Owner token...'
+      const status = await validateOwnerToken()
+      this.ownerEnabled = status.ownerVerified
+      this.ownerNotice = status.ownerVerified ? 'Owner verified. Live actions are unlocked.' : 'Owner verification failed; public demo remains active.'
+      if (!status.ownerVerified) this.ownerTokenInput = ''
     },
     removeOwnerToken() {
       clearOwnerToken()
       this.ownerTokenInput = ''
       this.refreshOwnerState()
     },
-    refreshOwnerState() {
-      this.ownerEnabled = hasOwnerToken()
+    refreshOwnerState(event) {
+      this.ownerEnabled = isOwnerVerified()
+      const state = event?.detail?.state || ''
+      if (state === 'cleared' || state === 'public') this.ownerNotice = ''
+      if (state === 'failed') this.ownerNotice = 'Owner not enabled; public demo remains active.'
+      if (state === 'verified') this.ownerNotice = 'Owner verified. Live actions are unlocked.'
     }
   }
 }

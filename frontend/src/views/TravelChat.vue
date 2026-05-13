@@ -42,6 +42,10 @@
             <button type="submit" :disabled="planLoading || !planMessage.trim()">
               {{ planLoading ? 'Planning...' : 'Generate TravelPlan' }}
             </button>
+            <label class="inline-toggle">
+              <input v-model="livePlanEnabled" type="checkbox" :disabled="!ownerEnabled || planLoading" />
+              <span>Live TravelPlan</span>
+            </label>
             <button
               v-if="chatDraft"
               type="button"
@@ -55,6 +59,7 @@
               New Demo
             </button>
           </div>
+          <p v-if="livePlanNotice" class="draft-notice">{{ livePlanNotice }}</p>
           <p v-if="chatDraftNotice" class="draft-notice">{{ chatDraftNotice }}</p>
         </form>
 
@@ -83,7 +88,7 @@
 </template>
 
 <script>
-import api, { hasOwnerToken } from '../api'
+import api, { isOwnerVerified, validateOwnerToken } from '../api'
 import ChatWindow from '../components/ChatWindow.vue'
 import PageShell from '../components/common/PageShell.vue'
 import StateBlock from '../components/common/StateBlock.vue'
@@ -115,7 +120,9 @@ export default {
       scoreLoading: false,
       scoreError: '',
       scoreResult: null,
-      ownerEnabled: hasOwnerToken(),
+      ownerEnabled: isOwnerVerified(),
+      livePlanEnabled: false,
+      livePlanNotice: '',
       demoStatus: { ...DEFAULT_DEMO_STATUS }
     }
   },
@@ -136,15 +143,18 @@ export default {
         : 'Structured plan is generating; chat replies may be slower.'
     },
     planLoadingMessage() {
-      if (this.demoStatus.demoMode && !this.ownerEnabled) {
+      if (!this.canUseLivePlan) {
         return 'Demo mode is returning the frozen TravelPlan fixture and its matching trace.'
       }
       return 'The structured TravelPlan can take 30-90 seconds when the live model is composing itinerary, budget, risks, and loaded Skills.'
     },
     traceLinkLabel() {
-      if (this.demoStatus.demoMode && !this.ownerEnabled) return 'View demo voyage trace'
+      if (!this.canUseLivePlan) return 'View demo voyage trace'
       if (this.demoStatus.liveManusAvailable) return 'View this live Agent trace'
       return 'View trace fixture'
+    },
+    canUseLivePlan() {
+      return this.ownerEnabled && this.livePlanEnabled
     }
   },
   mounted() {
@@ -158,7 +168,10 @@ export default {
   },
   methods: {
     refreshOwnerState() {
-      this.ownerEnabled = hasOwnerToken()
+      this.ownerEnabled = isOwnerVerified()
+      if (!this.ownerEnabled) {
+        this.livePlanEnabled = false
+      }
       this.fetchDemoStatus()
     },
     async fetchDemoStatus() {
@@ -177,21 +190,30 @@ export default {
       this.activePlanStartedAt = new Date().toISOString()
       this.savePlanSession()
       try {
-        const { data } = await api.post(
-          '/travel/plan',
-          {
-            message: this.requestMessage,
-            chatId: this.planChatId
-          },
-          {
-            timeout: 120000
-          }
-        )
+        const { data } = await this.requestTravelPlan(this.canUseLivePlan)
         this.plan = data
         this.scoreResult = null
         this.scoreError = ''
         this.savePlanSession()
       } catch (err) {
+        if (this.canUseLivePlan && err?.response?.status === 403) {
+          await validateOwnerToken()
+          this.ownerEnabled = isOwnerVerified()
+          this.livePlanEnabled = false
+          this.livePlanNotice = 'Live TravelPlan was disabled; showing the demo fixture.'
+          try {
+            const { data } = await this.requestTravelPlan(false)
+            this.plan = data
+            this.scoreResult = null
+            this.scoreError = ''
+            this.savePlanSession()
+            return
+          } catch (fallbackErr) {
+            this.planError = this.planErrorMessage(fallbackErr)
+            this.savePlanSession()
+            return
+          }
+        }
         this.planError = this.planErrorMessage(err)
         this.savePlanSession()
       } finally {
@@ -199,6 +221,19 @@ export default {
         this.activePlanStartedAt = ''
         this.savePlanSession()
       }
+    },
+    requestTravelPlan(liveMode) {
+      return api.post(
+        '/travel/plan',
+        {
+          message: this.requestMessage,
+          chatId: this.planChatId,
+          liveMode
+        },
+        {
+          timeout: liveMode ? 120000 : 30000
+        }
+      )
     },
     clearPlanSession() {
       sessionStorage.removeItem('wayfinder.travel.plan')
@@ -214,6 +249,7 @@ export default {
       this.scoreLoading = false
       this.scoreError = ''
       this.scoreResult = null
+      this.livePlanNotice = ''
     },
     restorePlanSession() {
       try {

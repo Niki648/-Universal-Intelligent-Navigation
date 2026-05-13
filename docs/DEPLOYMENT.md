@@ -1,6 +1,10 @@
 # Wayfinder Guild Deployment Guide
 
-This deployment keeps the public site cheap and safe: visitors can view the demo and portfolio, while live model/API/MCP/tool/artifact features require an Owner Token.
+This deployment keeps the public site cheap and safe: visitors can view the demo and portfolio, while live model/API/MCP/tool/artifact features require an Owner Token verified by the backend.
+
+Public Stable Engineering Demos are replayed real-run recordings. They return fixed JSON, realistic terminal output, artifact metadata, and summary cards captured from owner local runs; they do not run Maven, execute `java -version`, write files, generate PDFs/PNGs, register temporary artifacts, or expose download links.
+
+Public Travel Agent requests use the frozen demo TravelPlan fixture unless Owner access is verified and the user explicitly enables the page's live action. Server-side API keys only mean the server is capable of live work; they do not make live model calls public.
 
 ## Build
 
@@ -55,6 +59,8 @@ TRAVEL_RAG_MODE=lightweight
 ```
 
 Use `TRAVEL_RAG_MODE=pgvector` only when PostgreSQL/PgVector is configured. Keep MCP disabled unless you are running a controlled Owner demo.
+
+The frontend may store a submitted token in browser session storage and send it as `X-Wayfinder-Owner-Token` / `WAYFINDER_OWNER_TOKEN` cookie for `/api` requests, but `/api/travel/owner-status` confirmation only unlocks live controls. It does not change default portfolio pages into live mode.
 
 If `WAYFINDER_OWNER_TOKEN` is empty, protected live endpoints remain forbidden in production.
 
@@ -155,8 +161,12 @@ curl -f https://your-domain.example/api/travel/demo-status
 
 ## Public vs Owner
 
-Public visitors can access portfolio/RPG metadata, health checks, demo status, demo TravelPlan, demo chat stream, demo RAG explain, and static frontend assets.
+Public visitors can access portfolio/RPG metadata, health checks, demo status, Owner status validation, demo TravelPlan, demo chat stream, demo RAG explain, and static frontend assets.
 
-Public visitors cannot trigger live model calls, MCP, Tavily/Pexels/search, SyManus live tool loops, demo-tool server tasks, or artifact preview/download.
+Public visitors and default page loads can click Stable Engineering Demos, but those requests call `/api/travel/manus/recorded-demo-tool` and replay real-run recordings only.
 
-Owner access is enabled by setting `WAYFINDER_OWNER_TOKEN` on the server and entering the same token in the frontend top bar. The token is stored only in the browser session/cookie, not in source code.
+Public visitors cannot trigger live model calls, MCP, Tavily/Pexels/search, SyManus live tool loops, real demo-tool server tasks, Maven tests, runtime commands, file/PDF/PNG generation, or artifact preview/download.
+
+Owner access is enabled by setting `WAYFINDER_OWNER_TOKEN` on the server and entering the same token in the frontend top bar. The token is stored only in the browser session/cookie, not in source code. If validation fails, the frontend clears Owner state and keeps the public demo paths usable.
+
+With verified Owner access, live controls become available but stay off by default. Stable Engineering Demos call `/api/travel/manus/demo-tool`, TravelPlan calls the live structured planner, and Trace reads live trace registries only when the matching page-level Live Run / Live TravelPlan / Live Trace control is explicitly enabled. Use these only for controlled demos.

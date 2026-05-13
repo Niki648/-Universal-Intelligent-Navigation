@@ -12,6 +12,7 @@ import com.seewhy.syaiagent.service.DemoArtifactService;
 import com.seewhy.syaiagent.service.SseEmitterStreamService;
 import com.seewhy.syaiagent.service.SyManusArtifactLinkService;
 import com.seewhy.syaiagent.service.SyManusDemoToolService;
+import com.seewhy.syaiagent.service.SyManusRecordedDemoToolService;
 import com.seewhy.syaiagent.service.TravelRagService;
 import com.seewhy.syaiagent.service.WayfinderDemoService;
 import com.seewhy.syaiagent.service.WayfinderDoctorRunner;
@@ -160,6 +161,35 @@ class WayfinderTravelControllerDemoToolTest {
     }
 
     @Test
+    void recordedDemoEndpointReturnsRealRunReplayWithoutArtifactLinks() throws Exception {
+        mockMvc.perform(post("/travel/manus/recorded-demo-tool")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"type\":\"portfolio-brief-pack\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.type").value("portfolio-brief-pack"))
+                .andExpect(jsonPath("$.message").value("Portfolio Brief Pack generated Wayfinder Guild Markdown and PDF artifacts."))
+                .andExpect(jsonPath("$.artifacts[0].fileName").value("wayfinder-guild-brief.md"))
+                .andExpect(jsonPath("$.artifacts[0].previewUrl").doesNotExist())
+                .andExpect(jsonPath("$.artifacts[0].downloadUrl").doesNotExist())
+                .andExpect(jsonPath("$.artifacts[0].expiresAt").doesNotExist())
+                .andExpect(jsonPath("$.artifacts[1].fileName").value("wayfinder-guild-interview-brief.pdf"))
+                .andExpect(jsonPath("$.summaryItems[0].label").value("Generated Text Artifact"));
+    }
+
+    @Test
+    void recordedBackendTestsUseSanitizedTranscript() throws Exception {
+        mockMvc.perform(post("/travel/manus/recorded-demo-tool")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"type\":\"backend-tests\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("mvn -Dtest=WayfinderTravelControllerDemoToolTest,TravelRagServiceTest,RpgEvalServiceTest,DemoArtifactServiceTest,SyManusArtifactLinkServiceTest,SyManusDemoToolServiceTest,ToolRegistrationTest test completed."))
+                .andExpect(jsonPath("$.terminalOutput", containsString("<workspace>")))
+                .andExpect(jsonPath("$.terminalOutput", containsString("<user-home>")))
+                .andExpect(jsonPath("$.terminalOutput", containsString("Tests run: 57, Failures: 0, Errors: 0, Skipped: 0")))
+                .andExpect(jsonPath("$.summaryItems[1].value").value("57 passed"));
+    }
+
+    @Test
     void demoEndpointReturnsBackendTargetedTestStructure() throws Exception {
         mockMvc.perform(post("/travel/manus/demo-tool")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -295,19 +325,21 @@ class WayfinderTravelControllerDemoToolTest {
                 demoService,
                 new OwnerAccessService("")
         );
-        TravelCapabilityController capabilityController = new TravelCapabilityController(capabilityStatusService);
+        OwnerAccessService ownerAccessService = new OwnerAccessService("");
+        TravelCapabilityController capabilityController = new TravelCapabilityController(capabilityStatusService, ownerAccessService);
         SyManusController syManusController = new SyManusController(
                 new ToolCallback[0],
                 mock(ChatModel.class),
                 mock(ChatMemory.class),
                 demoService,
                 demoToolService,
+                new SyManusRecordedDemoToolService(),
                 new SyManusArtifactLinkService(artifactService),
                 objectMapper,
-                new OwnerAccessService("")
+                ownerAccessService
         );
         ArtifactController artifactController = new ArtifactController(artifactDeliveryService);
-        TravelTraceController traceController = new TravelTraceController(mock(AgentTraceService.class), demoService);
+        TravelTraceController traceController = new TravelTraceController(mock(AgentTraceService.class), demoService, ownerAccessService);
         return MockMvcBuilders.standaloneSetup(controller, capabilityController, syManusController, artifactController, traceController).build();
     }
 

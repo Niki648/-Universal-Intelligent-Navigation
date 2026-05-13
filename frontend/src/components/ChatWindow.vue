@@ -49,7 +49,8 @@ export default {
     streamingLabel: { type: String, default: 'Streaming' },
     greetingResponse: { type: String, default: '' },
     localResponder: { type: Function, default: null },
-    hiddenLinePrefixes: { type: Array, default: () => [] }
+    hiddenLinePrefixes: { type: Array, default: () => [] },
+    queryParams: { type: Object, default: () => ({}) }
   },
   emits: ['submitted', 'stream-start', 'streaming', 'completed', 'failed', 'greeting', 'local-response', 'artifact', 'cleared'],
   data() {
@@ -122,6 +123,11 @@ export default {
 
       const base = (axios.defaults.baseURL || '').replace(/\/+$/, '')
       const params = new URLSearchParams({ message: text, chatId: this.chatId })
+      Object.entries(this.queryParams || {}).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.set(key, String(value))
+        }
+      })
       const url = `${base}${this.ssePath}?${params.toString()}`
 
       this.closeStream()

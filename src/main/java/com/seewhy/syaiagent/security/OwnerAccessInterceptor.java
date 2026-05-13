@@ -53,14 +53,14 @@ public class OwnerAccessInterceptor implements HandlerInterceptor {
             return true;
         }
         if (is(method, HttpMethod.GET) && path.equals("/travel/manus/chat")) {
-            return !wayfinderDemoService.isEnabled();
+            return false;
         }
 
         if (is(method, HttpMethod.POST) && path.equals("/travel/chat")) {
             return true;
         }
         if (is(method, HttpMethod.GET) && path.equals("/travel/chat/stream")) {
-            return !wayfinderDemoService.isEnabled();
+            return false;
         }
         if (is(method, HttpMethod.GET) && (
                 path.equals("/travel/chat/sync")
@@ -73,13 +73,13 @@ public class OwnerAccessInterceptor implements HandlerInterceptor {
             return true;
         }
         if (is(method, HttpMethod.POST) && path.equals("/travel/plan")) {
-            return !wayfinderDemoService.isEnabled();
+            return false;
         }
         if (is(method, HttpMethod.POST) && path.equals("/travel/rag")) {
             return true;
         }
         if (is(method, HttpMethod.POST) && path.equals("/travel/rag/explain")) {
-            return !wayfinderDemoService.isEnabled();
+            return false;
         }
         if (is(method, HttpMethod.POST) && path.equals("/travel/quick")) {
             return true;

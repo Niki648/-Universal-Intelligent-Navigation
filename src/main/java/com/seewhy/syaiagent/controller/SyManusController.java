@@ -8,6 +8,7 @@ import com.seewhy.syaiagent.model.DemoToolRequest;
 import com.seewhy.syaiagent.model.DemoToolResponse;
 import com.seewhy.syaiagent.service.SyManusArtifactLinkService;
 import com.seewhy.syaiagent.service.SyManusDemoToolService;
+import com.seewhy.syaiagent.service.SyManusRecordedDemoToolService;
 import com.seewhy.syaiagent.service.WayfinderDemoService;
 import com.seewhy.syaiagent.security.OwnerAccessService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,6 +41,7 @@ public class SyManusController {
     private final ChatMemory manusChatMemory;
     private final WayfinderDemoService wayfinderDemoService;
     private final SyManusDemoToolService syManusDemoToolService;
+    private final SyManusRecordedDemoToolService syManusRecordedDemoToolService;
     private final SyManusArtifactLinkService syManusArtifactLinkService;
     private final ObjectMapper objectMapper;
     private final OwnerAccessService ownerAccessService;
@@ -49,6 +51,7 @@ public class SyManusController {
                              @Qualifier("manusChatMemory") ChatMemory manusChatMemory,
                              WayfinderDemoService wayfinderDemoService,
                              SyManusDemoToolService syManusDemoToolService,
+                             SyManusRecordedDemoToolService syManusRecordedDemoToolService,
                              SyManusArtifactLinkService syManusArtifactLinkService,
                              ObjectMapper objectMapper,
                              OwnerAccessService ownerAccessService) {
@@ -57,6 +60,7 @@ public class SyManusController {
         this.manusChatMemory = manusChatMemory;
         this.wayfinderDemoService = wayfinderDemoService;
         this.syManusDemoToolService = syManusDemoToolService;
+        this.syManusRecordedDemoToolService = syManusRecordedDemoToolService;
         this.syManusArtifactLinkService = syManusArtifactLinkService;
         this.objectMapper = objectMapper;
         this.ownerAccessService = ownerAccessService;
@@ -68,11 +72,15 @@ public class SyManusController {
     @GetMapping("/chat")
     public SseEmitter doChatWithManus(@RequestParam String message,
                                       @RequestParam(required = false) String chatId,
+                                      @RequestParam(defaultValue = "false") boolean liveMode,
                                       HttpServletRequest httpRequest) {
         validateMessage(message);
         String id = normalizeChatId(chatId);
-        if (wayfinderDemoService.isEnabled() && !ownerAccessService.hasOwnerAccess(httpRequest)) {
+        if (!liveMode) {
             return demoManusBoundaryEmitter(message, true);
+        }
+        if (!ownerAccessService.hasOwnerAccess(httpRequest)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Owner token required for live SyManus tasks.");
         }
         if (chatModel == null || allTools == null || allTools.length == 0) {
             return demoManusBoundaryEmitter(message, false);
@@ -90,6 +98,14 @@ public class SyManusController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Demo tool type is required.");
         }
         return syManusDemoToolService.runDemo(request.type());
+    }
+
+    @PostMapping("/recorded-demo-tool")
+    public DemoToolResponse runRecordedManusDemoTool(@RequestBody DemoToolRequest request) {
+        if (request == null || request.type() == null || request.type().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Recorded demo tool type is required.");
+        }
+        return syManusRecordedDemoToolService.runRecordedDemo(request.type());
     }
 
     private SseEmitter demoManusBoundaryEmitter(String message, boolean publicDemoMode) {

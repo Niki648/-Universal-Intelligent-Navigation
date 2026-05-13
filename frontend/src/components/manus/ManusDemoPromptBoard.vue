@@ -2,11 +2,11 @@
   <div class="tool-prompt-board" aria-label="SyManus demo tasks">
     <section class="prompt-group stable-demo">
       <div class="prompt-group-head">
-        <strong>Stable Engineering Demos</strong>
-        <span>Local and repeatable</span>
+        <strong>{{ stableDemoHeading }}</strong>
+        <span>{{ stableDemoSubheading }}</span>
       </div>
       <p class="prompt-copy">
-        Fixed backend tasks for project quality checks, targeted tests, runtime verification, portfolio artifacts, and a Wayfinder trace card.
+        {{ stableDemoCopy }}
       </p>
       <div class="demo-card-grid">
         <button
@@ -58,7 +58,13 @@ export default {
     publicDemoMode: { type: Boolean, default: true },
     liveTaskHeading: { type: String, required: true },
     liveTaskSubheading: { type: String, required: true },
-    liveTaskCopy: { type: String, required: true }
+    liveTaskCopy: { type: String, required: true },
+    stableDemoHeading: { type: String, default: 'Stable Engineering Demos' },
+    stableDemoSubheading: { type: String, default: 'Real run replay' },
+    stableDemoCopy: {
+      type: String,
+      default: 'Recorded from real local runs: project checks, targeted tests, runtime verification, portfolio artifacts, and trace-card generation.'
+    }
   },
   emits: ['stable-demo', 'live-task'],
   methods: {

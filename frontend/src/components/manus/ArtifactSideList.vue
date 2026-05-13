@@ -10,7 +10,8 @@
         <strong>{{ artifact.fileName }}</strong>
         <span>{{ artifact.mimeType }}</span>
         <span>{{ formatBytes(artifact.size) }}</span>
-        <span>Expires {{ formatDate(artifact.expiresAt) }}</span>
+        <span v-if="artifact.expiresAt">Expires {{ formatDate(artifact.expiresAt) }}</span>
+        <span v-else>Recorded artifact metadata</span>
       </div>
     </div>
     <p v-else class="boundary-note">

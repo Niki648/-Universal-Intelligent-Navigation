@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 public record TravelPlanRequest(
         @NotBlank(message = "message cannot be blank")
         String message,
-        String chatId
+        String chatId,
+        Boolean liveMode
 ) {
 }

@@ -64,12 +64,19 @@ public class WayfinderTravelController {
     @GetMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> streamChat(@RequestParam String message,
                                    @RequestParam(required = false) String chatId,
+                                   @RequestParam(defaultValue = "false") boolean liveMode,
                                    HttpServletRequest httpRequest) {
         validateMessage(message);
         String id = normalizeChatId(chatId);
-        if (isPublicDemoRequest(httpRequest)) {
+        if (!liveMode) {
             return wayfinderDemoService.demoChatStream(message, id)
                     .doOnCancel(() -> log.info("Demo SSE stream cancelled for {}", id));
+        }
+        if (isPublicDemoRequest(httpRequest)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN,
+                    "Owner token required for live Travel chat streaming."
+            );
         }
         return wayfinderTravelFacade.doChatByStream(message, id)
                 .doOnCancel(() -> log.info("SSE stream cancelled for {}", id))
@@ -125,10 +132,16 @@ public class WayfinderTravelController {
     public TravelPlan generatePlan(@Valid @RequestBody TravelPlanRequest request,
                                    HttpServletRequest httpRequest) {
         String chatId = normalizeChatId(request.chatId());
-        if (isPublicDemoRequest(httpRequest)) {
-            return wayfinderDemoService.demoTravelPlan();
+        if (Boolean.TRUE.equals(request.liveMode())) {
+            if (ownerAccessService.hasOwnerAccess(httpRequest)) {
+                return wayfinderTravelFacade.doStructuredPlan(request.message(), chatId);
+            }
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN,
+                    "Owner token required for live TravelPlan generation."
+            );
         }
-        return wayfinderTravelFacade.doStructuredPlan(request.message(), chatId);
+        return wayfinderDemoService.demoTravelPlan();
     }
 
     /**
@@ -197,7 +210,7 @@ public class WayfinderTravelController {
     }
 
     private boolean isPublicDemoRequest(HttpServletRequest request) {
-        return wayfinderDemoService.isEnabled() && !ownerAccessService.hasOwnerAccess(request);
+        return !ownerAccessService.hasOwnerAccess(request);
     }
 
 }

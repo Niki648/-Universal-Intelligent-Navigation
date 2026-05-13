@@ -8,8 +8,13 @@
       <div class="tool-chat-column">
         <div class="tool-demo-intro">
           <p>
-            SyManus is the bounded ReAct tool agent behind Wayfinder Guild. Stable demos run fixed local tasks; live tasks keep the real tool loop and may depend on model quota, API keys, or network access.
+            SyManus is the bounded ReAct tool agent behind Wayfinder Guild. The public workshop replays real engineering runs; Owner mode can run the live backend tools for controlled demos.
           </p>
+          <label class="inline-toggle">
+            <input v-model="liveRunEnabled" type="checkbox" :disabled="!ownerEnabled" />
+            <span>Live Run</span>
+          </label>
+          <p v-if="liveRunNotice" class="boundary-note">{{ liveRunNotice }}</p>
         </div>
 
         <ManusDemoPromptBoard
@@ -20,6 +25,8 @@
           :live-task-heading="liveTaskHeading"
           :live-task-subheading="liveTaskSubheading"
           :live-task-copy="liveTaskCopy"
+          :stable-demo-subheading="stableDemoSubheading"
+          :stable-demo-copy="stableDemoCopy"
           @stable-demo="startExample"
           @live-task="fillLiveTask"
         />
@@ -34,6 +41,7 @@
           clear-label="New Chat"
           send-label="Send"
           streaming-label="Running"
+          :query-params="{ liveMode: canUseLiveRun }"
           :local-responder="toolLocalResponder"
           @submitted="handleSubmitted"
           @stream-start="handleStreamStart"
@@ -93,7 +101,7 @@
 </template>
 
 <script>
-import axios, { hasOwnerToken } from '../api'
+import axios, { isOwnerVerified, validateOwnerToken } from '../api'
 import ChatWindow from '../components/ChatWindow.vue'
 import PageShell from '../components/common/PageShell.vue'
 import ArtifactSideList from '../components/manus/ArtifactSideList.vue'
@@ -103,7 +111,9 @@ import { artifactsFromResult, renderDemoResult } from '../utils/manusDemoRendere
 const STORAGE_KEY = 'wayfinder.tool.session'
 
 const MODE_IDLE = 'Ready'
-const MODE_PUBLIC = 'Stable Demo'
+const MODE_RECORDED = 'Recorded Demo'
+const MODE_LIVE_DEMO = 'Live Demo'
+const MODE_PUBLIC = MODE_RECORDED
 const MODE_LIVE = 'Live Tool Task'
 const MODE_EXAMPLE = 'Example Prompt'
 const DEFAULT_DEMO_STATUS = {
@@ -119,33 +129,33 @@ const IDLE_STEPS = [
     title: 'Task framed',
     status: 'Ready',
     state: 'started',
-    description: 'Choose a Stable Engineering Demo or send one bounded live tool task.'
+    description: 'Choose a Recorded Demo or send one bounded live tool task.'
   },
   {
     id: 'tool',
     title: 'Tool selected',
     status: 'Queued',
     state: 'skipped',
-    description: 'Stable demos use fixed local runners; live tasks use SyManus tool planning.'
+    description: 'Public demos replay fixed results; Owner demos can run backend tools.'
   },
   {
     id: 'run',
     title: 'Backend executed',
     status: 'Queued',
     state: 'skipped',
-    description: 'The backend runs a fixed command, file/PDF/image generator, or live tool call.'
+    description: 'Recorded mode returns fixed output; Owner mode runs a fixed command, file/PDF/image generator, or live tool call.'
   },
   {
     id: 'result',
     title: 'Result delivered',
     status: 'Queued',
     state: 'skipped',
-    description: 'The UI shows terminal output or expiring artifact preview and download links.'
+    description: 'The UI shows recorded output, or Owner-only expiring artifact preview and download links.'
   }
 ]
 
 const LOCAL_RESPONSES = {
-  greeting: 'Hi, I am the SyManus Tool Agent. Start with a Stable Engineering Demo, or send one explicit live tool task.',
+  greeting: 'Hi, I am the SyManus Tool Agent. Start with a Recorded Demo, or send one explicit live tool task.',
   unsupportedDownload: 'This public live task area does not search for or download arbitrary resumes, CVs, private files, or unspecified external files. Use Portfolio Brief Pack for the interview artifact demo, or provide a concrete safe URL for a bounded download task.',
   resumeRedirect: 'For this showcase, generic resume requests are routed to Portfolio Brief Pack. It generates Wayfinder Guild Markdown and PDF artifacts that describe the real Travel Agent, RAG, trace, eval, guardrail, and SyManus boundaries.'
 }
@@ -171,41 +181,43 @@ export default {
       executionSteps: cloneSteps(),
       isStreaming: false,
       recentArtifacts: [],
-      ownerEnabled: hasOwnerToken(),
+      ownerEnabled: isOwnerVerified(),
+      liveRunEnabled: false,
+      liveRunNotice: '',
       demoStatus: { ...DEFAULT_DEMO_STATUS },
       stableDemoExamples: [
         {
           label: 'Wayfinder Doctor',
           description: 'skills, RPG, evals, prompts, RAG docs, naming',
-          mode: MODE_PUBLIC,
+          mode: MODE_RECORDED,
           demoType: 'doctor',
           prompt: 'Run the fixed Wayfinder Doctor engineering check.'
         },
         {
           label: 'Backend Targeted Tests',
           description: 'fixed Maven quality gate',
-          mode: MODE_PUBLIC,
+          mode: MODE_RECORDED,
           demoType: 'backend-tests',
           prompt: 'Run the fixed backend targeted Maven tests.'
         },
         {
           label: 'Java Runtime Check',
           description: 'allowlisted java -version',
-          mode: MODE_PUBLIC,
+          mode: MODE_RECORDED,
           demoType: 'java-runtime',
           prompt: 'Run the fixed Java runtime version check.'
         },
         {
           label: 'Portfolio Brief Pack',
           description: 'Wayfinder MD + PDF artifacts',
-          mode: MODE_PUBLIC,
+          mode: MODE_RECORDED,
           demoType: 'portfolio-brief-pack',
           prompt: 'Generate the Wayfinder Guild Portfolio Brief Pack.'
         },
         {
           label: 'Trace Card Image',
           description: 'fixed Wayfinder trace PNG',
-          mode: MODE_PUBLIC,
+          mode: MODE_RECORDED,
           demoType: 'trace-card-image',
           prompt: 'Generate the fixed Wayfinder trace card image.'
         }
@@ -231,7 +243,18 @@ export default {
   },
   computed: {
     isPublicDemoMode() {
-      return this.demoStatus.demoMode && !this.ownerEnabled
+      return !this.canUseLiveRun
+    },
+    canUseLiveRun() {
+      return this.ownerEnabled && this.liveRunEnabled
+    },
+    stableDemoSubheading() {
+      return this.canUseLiveRun ? 'Live Run' : 'Real run replay'
+    },
+    stableDemoCopy() {
+      return this.canUseLiveRun
+        ? 'Runs fixed backend tools on your server: checks, Maven tests, runtime verification, and artifact generation.'
+        : 'Recorded from real local runs: project checks, targeted tests, runtime verification, portfolio artifacts, and trace-card generation.'
     },
     liveTaskHeading() {
       return this.isPublicDemoMode ? 'Live Tool Task Examples' : 'Live Tool Tasks'
@@ -248,18 +271,18 @@ export default {
       return `These prompts use the real SyManus loop. Model/API access is enabled; ${searchNote}, and ${imageNote}.`
     },
     toolChatTitle() {
-      return this.isPublicDemoMode ? 'Tool Task Example' : 'Live Tool Task'
+      return this.isPublicDemoMode ? 'Recorded Run Replay' : 'Live Tool Task'
     },
     toolChatPlaceholder() {
       if (this.isPublicDemoMode) {
-        return 'Fill or enter an example prompt; public demo mode will return the boundary message.'
+        return 'Run a recorded engineering demo, or fill an example prompt to see the live boundary.'
       }
       return 'Enter one bounded live task, for example: Run this backend tool task now: echo SyManus live health check'
     },
     toolChatEmptyText() {
       return this.isPublicDemoMode
-        ? 'Run a Stable Engineering Demo, or fill an example prompt to see the live boundary.'
-        : 'Run a Stable Engineering Demo, or send one explicit live tool task.'
+        ? 'Run a recorded live-run replay, or fill an example prompt to see the live boundary.'
+        : 'Run a Live Demo, or send one explicit live tool task.'
     },
     statusClass() {
       return this.taskStatus.toLowerCase().replace(/\s+/g, '-')
@@ -275,7 +298,10 @@ export default {
   },
   methods: {
     refreshOwnerState() {
-      this.ownerEnabled = hasOwnerToken()
+      this.ownerEnabled = isOwnerVerified()
+      if (!this.ownerEnabled) {
+        this.liveRunEnabled = false
+      }
       this.fetchDemoStatus()
     },
     async fetchDemoStatus() {
@@ -287,7 +313,7 @@ export default {
       }
     },
     startExample(example) {
-      this.taskMode = example.mode || MODE_PUBLIC
+      this.taskMode = this.canUseLiveRun ? MODE_LIVE_DEMO : (example.mode || MODE_RECORDED)
       this.runStableDemo(example)
     },
     fillLiveTask(example) {
@@ -300,20 +326,7 @@ export default {
     async runStableDemo(example) {
       if (this.isStreaming) return
       this.currentTask = example.label
-      this.taskMode = MODE_PUBLIC
-      if (!this.ownerEnabled) {
-        this.taskStatus = 'Owner Required'
-        this.$refs.toolChat?.appendLocalExchange(
-          example.prompt,
-          'This public demo does not run backend tools or generate/download artifacts. Enter the Owner token in the top bar to run fixed local demo tools on your server.'
-        )
-        this.markStep('task', 'Selected', 'completed')
-        this.markStep('tool', 'Owner token required', 'skipped')
-        this.markStep('run', 'Not started', 'skipped')
-        this.markStep('result', 'Protected', 'skipped')
-        this.saveSession()
-        return
-      }
+      this.taskMode = this.canUseLiveRun ? MODE_LIVE_DEMO : MODE_RECORDED
       this.taskStatus = 'Running'
       this.isStreaming = true
       this.recentArtifacts = []
@@ -324,14 +337,29 @@ export default {
       this.saveSession()
 
       try {
-        const { data } = await axios.post('/travel/manus/demo-tool', { type: example.demoType }, { timeout: 180000 })
+        const endpoint = this.canUseLiveRun ? '/travel/manus/demo-tool' : '/travel/manus/recorded-demo-tool'
+        const { data } = await axios.post(endpoint, { type: example.demoType }, { timeout: this.canUseLiveRun ? 180000 : 30000 })
         const rendered = renderDemoResult(data, { baseUrl: axios.defaults.baseURL })
         this.$refs.toolChat?.appendLocalExchange(example.prompt, rendered.text, rendered.html)
         artifactsFromResult(data).forEach((artifact) => this.addArtifact(artifact))
         this.taskStatus = data?.status === 'error' ? 'Failed' : 'Completed'
         this.markStep('run', this.taskStatus === 'Failed' ? 'Failed' : 'Completed', this.taskStatus === 'Failed' ? 'failed' : 'completed')
-        this.markStep('result', artifactsFromResult(data).length ? 'Files Ready' : this.taskStatus, this.taskStatus === 'Failed' ? 'failed' : 'completed')
+        const resultStatus = artifactsFromResult(data).length ? 'Files Ready' : (this.canUseLiveRun ? this.taskStatus : 'Recorded Result')
+        this.markStep('result', resultStatus, this.taskStatus === 'Failed' ? 'failed' : 'completed')
       } catch (error) {
+        if (this.canUseLiveRun && error?.response?.status === 403) {
+          await validateOwnerToken()
+          this.ownerEnabled = isOwnerVerified()
+          this.liveRunEnabled = false
+          this.liveRunNotice = 'Live Run was disabled; showing the recorded replay.'
+          const { data } = await axios.post('/travel/manus/recorded-demo-tool', { type: example.demoType }, { timeout: 30000 })
+          const rendered = renderDemoResult(data, { baseUrl: axios.defaults.baseURL })
+          this.$refs.toolChat?.appendLocalExchange(example.prompt, `Live unavailable. ${rendered.text}`, rendered.html)
+          this.taskStatus = 'Completed'
+          this.markStep('run', 'Recorded Replay', 'completed')
+          this.markStep('result', 'Recorded Result', 'completed')
+          return
+        }
         const message = error?.response?.data?.message || error?.message || 'The backend demo endpoint is unavailable.'
         this.$refs.toolChat?.appendLocalExchange(example.prompt, `Demo failed: ${message}`)
         this.taskStatus = 'Failed'
@@ -356,11 +384,19 @@ export default {
           content: language === 'zh' ? ZH_RESPONSES.unsupportedDownload : LOCAL_RESPONSES.unsupportedDownload
         }
       }
-      if (!this.isGreetingOnly(text)) return null
-      return {
-        intent: 'greeting',
-        content: language === 'zh' ? ZH_RESPONSES.greeting : LOCAL_RESPONSES.greeting
+      if (this.isGreetingOnly(text)) {
+        return {
+          intent: 'greeting',
+          content: language === 'zh' ? ZH_RESPONSES.greeting : LOCAL_RESPONSES.greeting
+        }
       }
+      if (!this.canUseLiveRun) {
+        return {
+          intent: 'live-boundary',
+          content: 'Live Tool Tasks are unlocked only after Owner verification and the Live Run switch is enabled. Recorded demos remain available above.'
+        }
+      }
+      return null
     },
     preferredLanguage(text) {
       return /[\u4e00-\u9fff]/.test(String(text || '')) ? 'zh' : 'en'
