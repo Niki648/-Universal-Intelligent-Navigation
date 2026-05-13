@@ -7,6 +7,9 @@
     <p class="trace-summary-note">
       This view summarizes trace events into interview-friendly Agent stages.
     </p>
+    <p class="trace-summary-note">
+      Trace and artifact data are demo-grade in-memory registries; events mark source/mode so fixture, fallback, and live runs stay explicit.
+    </p>
 
     <form class="inline-form" @submit.prevent="loadTrace">
       <input v-model="chatId" placeholder="travel-xxxx or chat-xxxx" />
@@ -223,6 +226,8 @@ export default {
       } else if (definition.id === 'final') {
         add('renderedOutput', 'Structured TravelPlan')
       }
+      add('source', metadata.source)
+      add('mode', metadata.mode)
 
       if (!items.length && this.hasMetadata(event)) {
         return Object.entries(metadata).map(([key, value]) => ({ key, value: this.renderValue(value) }))

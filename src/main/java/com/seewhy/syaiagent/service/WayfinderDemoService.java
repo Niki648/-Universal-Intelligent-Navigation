@@ -15,7 +15,9 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class WayfinderDemoService {
@@ -76,7 +78,7 @@ public class WayfinderDemoService {
                         event.step(),
                         event.status(),
                         event.message(),
-                        event.metadata(),
+                        fixtureMetadata(event.metadata()),
                         event.timestamp()
                 ))
                 .toList();
@@ -144,5 +146,15 @@ public class WayfinderDemoService {
             return 0;
         }
         return Math.min(targetMaxScore, Math.round(score * targetMaxScore / (float) maxScore));
+    }
+
+    private Map<String, Object> fixtureMetadata(Map<String, Object> metadata) {
+        Map<String, Object> enriched = new LinkedHashMap<>();
+        if (metadata != null) {
+            enriched.putAll(metadata);
+        }
+        enriched.put("source", "fixture");
+        enriched.put("mode", "demo");
+        return enriched;
     }
 }

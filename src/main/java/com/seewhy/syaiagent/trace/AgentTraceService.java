@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -41,7 +42,7 @@ public class AgentTraceService {
                 step,
                 status,
                 message,
-                metadata,
+                enrichLiveMetadata(metadata),
                 Instant.now()
         );
         Deque<AgentTraceEvent> events = eventsByChatId.computeIfAbsent(normalizedChatId, ignored -> new ArrayDeque<>());
@@ -99,5 +100,15 @@ public class AgentTraceService {
 
     private String normalizeChatId(String chatId) {
         return chatId == null || chatId.isBlank() ? "default" : chatId.strip();
+    }
+
+    private Map<String, Object> enrichLiveMetadata(Map<String, Object> metadata) {
+        Map<String, Object> enriched = new LinkedHashMap<>();
+        if (metadata != null) {
+            enriched.putAll(metadata);
+        }
+        enriched.putIfAbsent("source", "live");
+        enriched.putIfAbsent("mode", "live");
+        return enriched;
     }
 }

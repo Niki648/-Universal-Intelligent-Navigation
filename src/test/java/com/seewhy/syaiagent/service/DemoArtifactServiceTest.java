@@ -33,6 +33,8 @@ class DemoArtifactServiceTest {
         assertEquals(5, response.size());
         assertTrue(response.previewUrl().startsWith("/travel/manus/artifacts/"));
         assertTrue(response.downloadUrl().endsWith("/download"));
+        assertEquals("demo", response.source());
+        assertEquals("in-memory", response.storageMode());
         assertNotNull(service.resolve(response.artifactId()).resource());
     }
 

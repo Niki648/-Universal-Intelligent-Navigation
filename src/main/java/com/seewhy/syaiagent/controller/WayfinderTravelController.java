@@ -15,7 +15,8 @@ import com.seewhy.syaiagent.model.TravelPlan;
 import com.seewhy.syaiagent.model.TravelPlanRequest;
 import com.seewhy.syaiagent.model.TravelReport;
 import com.seewhy.syaiagent.model.WayfinderDemoStatusResponse;
-import com.seewhy.syaiagent.service.DemoArtifactService;
+import com.seewhy.syaiagent.service.ArtifactDeliveryService;
+import com.seewhy.syaiagent.service.CapabilityStatusService;
 import com.seewhy.syaiagent.service.SseEmitterStreamService;
 import com.seewhy.syaiagent.service.SyManusArtifactLinkService;
 import com.seewhy.syaiagent.service.SyManusDemoToolService;
@@ -30,8 +31,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.Resource;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
@@ -40,12 +39,10 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
-import org.springframework.beans.factory.annotation.Value;
 import reactor.core.publisher.Flux;
 
 import org.springframework.http.HttpStatus;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -68,22 +65,11 @@ public class WayfinderTravelController {
     private final AgentTraceService agentTraceService;
     private final TravelRagService travelRagService;
     private final WayfinderDemoService wayfinderDemoService;
-    private final DemoArtifactService demoArtifactService;
+    private final CapabilityStatusService capabilityStatusService;
+    private final ArtifactDeliveryService artifactDeliveryService;
     private final SyManusDemoToolService syManusDemoToolService;
     private final SyManusArtifactLinkService syManusArtifactLinkService;
     private final ObjectMapper objectMapper;
-
-    @Value("${spring.ai.openai.api-key:demo-disabled}")
-    private String modelApiKey = "demo-disabled";
-
-    @Value("${search.provider:disabled}")
-    private String searchProviderName = "disabled";
-
-    @Value("${tavily.api-key:}")
-    private String tavilyApiKey = "";
-
-    @Value("${pexels.api-key:}")
-    private String pexelsApiKey = "";
 
     public WayfinderTravelController(WayfinderTravelFacade wayfinderTravelFacade,
                                      ToolCallback[] allTools,
@@ -93,7 +79,8 @@ public class WayfinderTravelController {
                                      AgentTraceService agentTraceService,
                                      TravelRagService travelRagService,
                                      WayfinderDemoService wayfinderDemoService,
-                                     DemoArtifactService demoArtifactService,
+                                     CapabilityStatusService capabilityStatusService,
+                                     ArtifactDeliveryService artifactDeliveryService,
                                      SyManusDemoToolService syManusDemoToolService,
                                      SyManusArtifactLinkService syManusArtifactLinkService,
                                      ObjectMapper objectMapper) {
@@ -105,7 +92,8 @@ public class WayfinderTravelController {
         this.agentTraceService = agentTraceService;
         this.travelRagService = travelRagService;
         this.wayfinderDemoService = wayfinderDemoService;
-        this.demoArtifactService = demoArtifactService;
+        this.capabilityStatusService = capabilityStatusService;
+        this.artifactDeliveryService = artifactDeliveryService;
         this.syManusDemoToolService = syManusDemoToolService;
         this.syManusArtifactLinkService = syManusArtifactLinkService;
         this.objectMapper = objectMapper;
@@ -123,22 +111,7 @@ public class WayfinderTravelController {
 
     @GetMapping("/demo-status")
     public WayfinderDemoStatusResponse demoStatus() {
-        boolean demoMode = wayfinderDemoService.isEnabled();
-        boolean liveManusAvailable = !demoMode
-                && chatModel != null
-                && allTools != null
-                && allTools.length > 0
-                && isConfiguredSecret(modelApiKey);
-        boolean searchAvailable = !demoMode
-                && "tavily".equalsIgnoreCase(blankToEmpty(searchProviderName))
-                && isConfiguredSecret(tavilyApiKey);
-        boolean imageSearchAvailable = !demoMode && isConfiguredSecret(pexelsApiKey);
-        return new WayfinderDemoStatusResponse(
-                demoMode,
-                liveManusAvailable,
-                searchAvailable,
-                imageSearchAvailable
-        );
+        return capabilityStatusService.currentStatus();
     }
 
     /**
@@ -246,17 +219,6 @@ public class WayfinderTravelController {
         String value = String.valueOf(message).toLowerCase();
         return value.contains("image") || value.contains("photo") || value.contains("picture")
                 || value.contains("pexels") || value.contains("\u56fe\u7247") || value.contains("\u7167\u7247");
-    }
-
-    private boolean isConfiguredSecret(String value) {
-        String normalized = blankToEmpty(value).toLowerCase();
-        return !normalized.isBlank()
-                && !"demo-disabled".equals(normalized)
-                && !normalized.startsWith("your-");
-    }
-
-    private String blankToEmpty(String value) {
-        return value == null ? "" : value.trim();
     }
 
     @PostMapping("/manus/demo-tool")
@@ -376,30 +338,7 @@ public class WayfinderTravelController {
     }
 
     private ResponseEntity<Resource> artifactResponse(String artifactId, boolean attachment) {
-        try {
-            DemoArtifactService.ArtifactResource artifact = demoArtifactService.resolve(artifactId);
-            ContentDisposition disposition = (attachment ? ContentDisposition.attachment() : ContentDisposition.inline())
-                    .filename(artifact.fileName(), StandardCharsets.UTF_8)
-                    .build();
-            return ResponseEntity.ok()
-                    .contentType(artifactMediaType(artifact))
-                    .contentLength(artifact.size())
-                    .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
-                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
-                    .body(artifact.resource());
-        } catch (SecurityException e) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, e.getMessage(), e);
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
-        }
-    }
-
-    private MediaType artifactMediaType(DemoArtifactService.ArtifactResource artifact) {
-        MediaType mediaType = MediaType.parseMediaType(artifact.mimeType());
-        if (MediaType.TEXT_PLAIN.includes(mediaType)) {
-            return new MediaType(MediaType.TEXT_PLAIN, StandardCharsets.UTF_8);
-        }
-        return mediaType;
+        return artifactDeliveryService.deliver(artifactId, attachment);
     }
 
     private String formatManusArtifactMarker(DemoArtifactResponse artifact) {

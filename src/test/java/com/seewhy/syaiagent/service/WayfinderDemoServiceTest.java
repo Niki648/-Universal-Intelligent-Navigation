@@ -46,6 +46,8 @@ class WayfinderDemoServiceTest {
         assertTrue(events.stream().anyMatch(event -> event.step() == AgentTraceStep.BUDGET_CHECK));
         assertTrue(events.stream().anyMatch(event -> event.step() == AgentTraceStep.RISK_CHECK));
         assertTrue(events.stream().anyMatch(event -> event.metadata().containsKey("missingFields")));
+        assertTrue(events.stream().allMatch(event -> event.metadata().get("source").equals("fixture")));
+        assertTrue(events.stream().allMatch(event -> event.metadata().get("mode").equals("demo")));
     }
 
     @Test

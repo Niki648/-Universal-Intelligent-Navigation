@@ -6,6 +6,8 @@ import com.seewhy.syaiagent.app.WayfinderTravelFacade;
 import com.seewhy.syaiagent.constant.FileConstant;
 import com.seewhy.syaiagent.guardrail.GuardrailService;
 import com.seewhy.syaiagent.model.DemoArtifactResponse;
+import com.seewhy.syaiagent.service.ArtifactDeliveryService;
+import com.seewhy.syaiagent.service.CapabilityStatusService;
 import com.seewhy.syaiagent.service.DemoArtifactService;
 import com.seewhy.syaiagent.service.SseEmitterStreamService;
 import com.seewhy.syaiagent.service.SyManusArtifactLinkService;
@@ -281,7 +283,8 @@ class WayfinderTravelControllerDemoToolTest {
                 mock(AgentTraceService.class),
                 mock(TravelRagService.class),
                 new WayfinderDemoService(demoEnabled),
-                artifactService,
+                new CapabilityStatusService(new WayfinderDemoService(demoEnabled), new ToolCallback[0], mock(ChatModel.class), "demo-disabled", "disabled", "", ""),
+                new ArtifactDeliveryService(artifactService),
                 demoToolService,
                 new SyManusArtifactLinkService(artifactService),
                 objectMapper

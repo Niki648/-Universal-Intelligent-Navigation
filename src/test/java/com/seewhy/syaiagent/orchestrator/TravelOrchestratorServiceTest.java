@@ -1,7 +1,9 @@
 package com.seewhy.syaiagent.orchestrator;
 
 import com.seewhy.syaiagent.model.TravelPlan;
+import com.seewhy.syaiagent.trace.AgentTraceStep;
 import com.seewhy.syaiagent.trace.AgentTraceService;
+import com.seewhy.syaiagent.trace.AgentTraceStatus;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -32,7 +34,18 @@ class TravelOrchestratorServiceTest {
                 traceService
         );
 
-        TravelRequirement requirement = new TravelRequirement("日本 7 天旅行", true, List.of(), TravelTaskType.STRUCTURED_PLAN);
+        TravelRequirement requirement = new TravelRequirement(
+                "上海出发去日本 7 天旅行，3 人，预算 2 万",
+                true,
+                List.of(),
+                TravelTaskType.STRUCTURED_PLAN,
+                "上海",
+                "日本",
+                7,
+                3,
+                BigDecimal.valueOf(20_000),
+                "CNY"
+        );
         TravelPlan planned = plan("planned");
         TravelPlan budgeted = plan("budgeted");
         TravelPlan risked = plan("risked");
@@ -48,6 +61,16 @@ class TravelOrchestratorServiceTest {
 
         assertEquals("composed", result.summary());
         assertFalse(traceService.getEvents("chat-1").isEmpty());
+        var intentEvent = traceService.getEvents("chat-1").stream()
+                .filter(event -> event.step() == AgentTraceStep.USER_INTENT_RECOGNITION)
+                .filter(event -> event.status() == AgentTraceStatus.COMPLETED)
+                .findFirst()
+                .orElseThrow();
+        assertEquals("live", intentEvent.metadata().get("source"));
+        assertEquals("上海", intentEvent.metadata().get("departure"));
+        assertEquals("日本", intentEvent.metadata().get("destination"));
+        assertEquals(7, intentEvent.metadata().get("days"));
+        assertEquals(BigDecimal.valueOf(20_000), intentEvent.metadata().get("budgetTotal"));
         verify(requirementCollector).collect("日本 7 天旅行");
         verify(itineraryPlanner).plan(requirement, "chat-1");
         verify(budgetEstimator).estimate(planned);
