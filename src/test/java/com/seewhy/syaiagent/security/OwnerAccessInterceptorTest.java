@@ -28,16 +28,22 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import reactor.core.publisher.Flux;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class OwnerAccessInterceptorTest {
@@ -55,6 +61,7 @@ class OwnerAccessInterceptorTest {
     void setUp() {
         facade = mock(WayfinderTravelFacade.class);
         when(facade.doChat(anyString(), anyString())).thenReturn("live response");
+        when(facade.doChatByStream(anyString(), anyString())).thenReturn(Flux.just("live stream", "[DONE]"));
         when(facade.doStructuredPlan(anyString(), anyString())).thenReturn(new WayfinderDemoService(true).demoTravelPlan());
         demoToolService = mock(SyManusDemoToolService.class);
         recordedDemoToolService = mock(SyManusRecordedDemoToolService.class);
@@ -166,6 +173,61 @@ class OwnerAccessInterceptorTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"message\":\"Plan a relaxed Kyoto trip\",\"chatId\":\"owner-live-plan\",\"liveMode\":true}"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void travelChatStreamDefaultsToDemoEvenWithVerifiedOwnerToken() throws Exception {
+        MvcResult result = liveMockMvc.perform(get("/travel/chat/stream")
+                        .param("message", "Plan a relaxed Kyoto trip")
+                        .param("chatId", "owner-demo-chat")
+                        .header(OwnerAccessService.OWNER_TOKEN_HEADER, OWNER_TOKEN)
+                        .accept(MediaType.TEXT_EVENT_STREAM))
+                .andExpect(status().isOk())
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        liveMockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Owner token verification only unlocks live controls")))
+                .andExpect(content().string(containsString("[DONE]")));
+
+        verify(facade, never()).doChatByStream(anyString(), anyString());
+    }
+
+    @Test
+    void travelChatStreamExplicitLiveFlagRejectsMissingOrWrongOwnerToken() throws Exception {
+        liveMockMvc.perform(get("/travel/chat/stream")
+                        .param("message", "Plan a relaxed Kyoto trip")
+                        .param("chatId", "owner-live-chat")
+                        .param("liveMode", "true"))
+                .andExpect(status().isForbidden());
+
+        liveMockMvc.perform(get("/travel/chat/stream")
+                        .param("message", "Plan a relaxed Kyoto trip")
+                        .param("chatId", "owner-live-chat")
+                        .param("liveMode", "true")
+                        .header(OwnerAccessService.OWNER_TOKEN_HEADER, "wrong-token"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void travelChatStreamExplicitLiveFlagUsesLiveFacadeWithVerifiedOwnerToken() throws Exception {
+        MvcResult result = liveMockMvc.perform(get("/travel/chat/stream")
+                        .param("message", "Plan a relaxed Kyoto trip")
+                        .param("chatId", "owner-live-chat")
+                        .param("liveMode", "true")
+                        .header(OwnerAccessService.OWNER_TOKEN_HEADER, OWNER_TOKEN)
+                        .accept(MediaType.TEXT_EVENT_STREAM))
+                .andExpect(status().isOk())
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        liveMockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("live stream")))
+                .andExpect(content().string(containsString("[DONE]")));
+
+        verify(facade).doChatByStream("Plan a relaxed Kyoto trip", "owner-live-chat");
     }
 
     @Test

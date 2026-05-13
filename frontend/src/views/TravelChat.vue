@@ -7,17 +7,27 @@
     <div class="travel-agent-layout">
       <section class="travel-chat-column">
         <h2>Streaming Chat</h2>
+        <div class="form-actions chat-live-actions">
+          <label class="inline-toggle">
+            <input v-model="liveChatEnabled" type="checkbox" :disabled="!ownerEnabled" @change="handleLiveChatToggle" />
+            <span>Live Chat</span>
+          </label>
+        </div>
         <ChatWindow
           title="Travel Agent"
           sse-path="/travel/chat/stream"
           storage-key="wayfinder.travel.chat"
           clear-label="New Chat"
+          :query-params="chatQueryParams"
+          :stream-error-text="chatStreamErrorText"
           :local-responder="travelLocalResponder"
           :hidden-line-prefixes="['PLAN_DRAFT:']"
           @submitted="handleChatSubmitted"
           @completed="handleChatCompleted"
+          @failed="handleChatFailed"
           @cleared="handleChatCleared"
         />
+        <p v-if="liveChatNotice" class="draft-notice">{{ liveChatNotice }}</p>
         <p v-if="planLoading" class="draft-notice">{{ planLoadingChatNotice }}</p>
         <div v-if="chatDraft" class="chat-draft-action">
           <div>
@@ -123,7 +133,9 @@ export default {
       ownerEnabled: isOwnerVerified(),
       livePlanEnabled: false,
       livePlanNotice: '',
-      demoStatus: { ...DEFAULT_DEMO_STATUS }
+      demoStatus: { ...DEFAULT_DEMO_STATUS },
+      liveChatEnabled: false,
+      liveChatNotice: ''
     }
   },
   computed: {
@@ -155,6 +167,17 @@ export default {
     },
     canUseLivePlan() {
       return this.ownerEnabled && this.livePlanEnabled
+    },
+    canUseLiveChat() {
+      return this.ownerEnabled && this.liveChatEnabled
+    },
+    chatQueryParams() {
+      return this.canUseLiveChat ? { liveMode: true } : {}
+    },
+    chatStreamErrorText() {
+      return this.canUseLiveChat
+        ? 'Live Chat was disabled; demo stream remains active.'
+        : '[Hint] The stream ended or the backend is unavailable. Please check that the backend service is running.'
     }
   },
   mounted() {
@@ -168,11 +191,21 @@ export default {
   },
   methods: {
     refreshOwnerState() {
+      const hadLiveChat = this.liveChatEnabled
       this.ownerEnabled = isOwnerVerified()
       if (!this.ownerEnabled) {
+        this.liveChatEnabled = false
         this.livePlanEnabled = false
+        if (hadLiveChat) {
+          this.liveChatNotice = 'Live Chat was disabled; demo stream remains active.'
+        }
       }
       this.fetchDemoStatus()
+    },
+    handleLiveChatToggle() {
+      this.liveChatNotice = this.liveChatEnabled
+        ? ''
+        : 'Live Chat is off; demo stream remains active.'
     },
     async fetchDemoStatus() {
       try {
@@ -359,8 +392,16 @@ export default {
       this.savePlanSession()
     },
     handleChatSubmitted() {
+      this.liveChatNotice = ''
       this.clearChatDraftState()
       this.savePlanSession()
+    },
+    async handleChatFailed() {
+      if (!this.liveChatEnabled) return
+      await validateOwnerToken()
+      this.ownerEnabled = isOwnerVerified()
+      this.liveChatEnabled = false
+      this.liveChatNotice = 'Live Chat was disabled; demo stream remains active.'
     },
     handleChatCleared() {
       this.clearChatCollectionState()

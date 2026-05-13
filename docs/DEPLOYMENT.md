@@ -4,7 +4,7 @@ This deployment keeps the public site cheap and safe: visitors can view the demo
 
 Public Stable Engineering Demos are replayed real-run recordings. They return fixed JSON, realistic terminal output, artifact metadata, and summary cards captured from owner local runs; they do not run Maven, execute `java -version`, write files, generate PDFs/PNGs, register temporary artifacts, or expose download links.
 
-Public Travel Agent requests use the frozen demo TravelPlan fixture unless Owner access is verified and the user explicitly enables the page's live action. Server-side API keys only mean the server is capable of live work; they do not make live model calls public.
+Public Travel Agent requests use the demo chat stream and frozen TravelPlan fixture unless Owner access is verified and the user explicitly enables the page's matching live action. Server-side API keys only mean the server is capable of live work; they do not make live model calls public.
 
 ## Build
 
@@ -60,7 +60,7 @@ TRAVEL_RAG_MODE=lightweight
 
 Use `TRAVEL_RAG_MODE=pgvector` only when PostgreSQL/PgVector is configured. Keep MCP disabled unless you are running a controlled Owner demo.
 
-The frontend may store a submitted token in browser session storage and send it as `X-Wayfinder-Owner-Token` / `WAYFINDER_OWNER_TOKEN` cookie for `/api` requests, but `/api/travel/owner-status` confirmation only unlocks live controls. It does not change default portfolio pages into live mode.
+The frontend may store a submitted token in browser session storage and send it as `X-Wayfinder-Owner-Token` / `WAYFINDER_OWNER_TOKEN` cookie for `/api` requests, but `/api/travel/owner-status` confirmation only unlocks live controls. Owner verified only unlocks live controls; it does not switch pages into live mode or change default portfolio pages into live mode.
 
 If `WAYFINDER_OWNER_TOKEN` is empty, protected live endpoints remain forbidden in production.
 
@@ -169,4 +169,4 @@ Public visitors cannot trigger live model calls, MCP, Tavily/Pexels/search, SyMa
 
 Owner access is enabled by setting `WAYFINDER_OWNER_TOKEN` on the server and entering the same token in the frontend top bar. The token is stored only in the browser session/cookie, not in source code. If validation fails, the frontend clears Owner state and keeps the public demo paths usable.
 
-With verified Owner access, live controls become available but stay off by default. Stable Engineering Demos call `/api/travel/manus/demo-tool`, TravelPlan calls the live structured planner, and Trace reads live trace registries only when the matching page-level Live Run / Live TravelPlan / Live Trace control is explicitly enabled. Use these only for controlled demos.
+With verified Owner access, live controls become available but stay off by default. Stable Engineering Demos call `/api/travel/manus/demo-tool`, Streaming Chat calls `/api/travel/chat/stream?liveMode=true`, TravelPlan calls the live structured planner, and Trace reads live trace registries only when the matching page-level Live Run / Live Chat / Live TravelPlan / Live Trace control is explicitly enabled. Each live request is still verified by the backend Owner token check; if validation fails, the frontend disables the live control and keeps the public demo path usable. Use these only for controlled demos.

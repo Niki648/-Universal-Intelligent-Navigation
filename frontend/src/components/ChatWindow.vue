@@ -47,6 +47,10 @@ export default {
     clearLabel: { type: String, default: 'New Chat' },
     sendLabel: { type: String, default: 'Send' },
     streamingLabel: { type: String, default: 'Streaming' },
+    streamErrorText: {
+      type: String,
+      default: '[Hint] The stream ended or the backend is unavailable. Please check that the backend service is running.'
+    },
     greetingResponse: { type: String, default: '' },
     localResponder: { type: Function, default: null },
     hiddenLinePrefixes: { type: Array, default: () => [] },
@@ -146,9 +150,13 @@ export default {
       }
       this.es.onerror = () => {
         if (!this.messages[this.currentAiIndex]?.content) {
-          this.messages[this.currentAiIndex].content = '[Hint] The stream ended or the backend is unavailable. Please check that the backend service is running.'
+          this.messages[this.currentAiIndex].content = this.streamErrorText
           this.taskStatus = 'Failed'
-          this.$emit('failed', { chatId: this.chatId, message: text })
+          this.$emit('failed', {
+            chatId: this.chatId,
+            message: text,
+            queryParams: { ...(this.queryParams || {}) }
+          })
         }
         this.finishStream()
       }

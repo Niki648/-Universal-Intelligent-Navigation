@@ -87,7 +87,8 @@ class WayfinderTravelControllerDemoToolTest {
         demoMockMvc.perform(asyncDispatch(result))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("requirement -> RAG -> tool/plan -> guardrail -> trace")))
-                .andExpect(content().string(containsString("DeepSeek API key")))
+                .andExpect(content().string(containsString("Owner token verification only unlocks live controls")))
+                .andExpect(content().string(containsString("Live Chat or Live TravelPlan")))
                 .andExpect(content().string(containsString("[DONE]")));
 
         verify(demoFacade, never()).doChatByStream(anyString(), anyString());

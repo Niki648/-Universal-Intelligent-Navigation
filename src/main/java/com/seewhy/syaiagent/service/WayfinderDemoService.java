@@ -59,7 +59,7 @@ public class WayfinderDemoService {
                 "\n已加载 Skills：family-trip-planning、japan-travel、relaxed-travel、budget-travel。",
                 "\n随后进入 requirement -> RAG -> tool/plan -> guardrail -> trace 链路，生成可渲染的 TravelPlan。",
                 "\n\n当前 public demo 使用一次 live run 冻结的稳定样例：Structured Plan 是 Kyoto 5-day fixture，评分样例为 92/100，Trace 来自同一次真实链路。",
-                "\n如需重新体验真实模型输出，请配置 WAYFINDER_OWNER_TOKEN 和有效 DeepSeek API key，然后在前端输入 Owner token。",
+                "\nOwner token verification only unlocks live controls. To run live output, enter a valid Owner token and explicitly enable Live Chat or Live TravelPlan; otherwise the public demo stream and fixture remain active.",
                 "\n\n",
                 "[DONE]"
         );
