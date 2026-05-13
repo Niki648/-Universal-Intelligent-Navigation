@@ -2,14 +2,14 @@ package com.seewhy.syaiagent.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.seewhy.syaiagent.eval.TravelEvalRuleResult;
 import com.seewhy.syaiagent.model.RagExplainResponse;
 import com.seewhy.syaiagent.model.TravelPlan;
 import com.seewhy.syaiagent.model.rpg.RpgEvalRunResponse;
 import com.seewhy.syaiagent.model.rpg.RpgEvalSampleResult;
 import com.seewhy.syaiagent.trace.AgentTraceEvent;
-import com.seewhy.syaiagent.eval.TravelEvalRuleResult;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -55,11 +55,11 @@ public class WayfinderDemoService {
     public Flux<String> demoChatStream(String message, String chatId) {
         return Flux.just(
                 "已收到你的旅行需求：上海出发，5 天家庭轻松游，目的地 Kyoto，预算 15000 CNY。",
-                "\n\n我会先抽取 destination、departure、days、budget 和 travel style；当前请求缺少 travelers，所以预算会保留人数假设与风险提示。",
+                "\n\n我会先抽取 destination、departure、days、budget 和 travel style；如果缺少 travelers，会保留人数假设和风险提示。",
                 "\n已加载 Skills：family-trip-planning、japan-travel、relaxed-travel、budget-travel。",
                 "\n随后进入 requirement -> RAG -> tool/plan -> guardrail -> trace 链路，生成可渲染的 TravelPlan。",
-                "\n\n当前 demo mode 使用一次 live run 冻结的稳定样例：Structured Plan 为 Kyoto 5-day fixture，当前评分样例为 92/100，Trace 来自同一次真实链路。",
-                "\n如需重新体验真实模型输出，可以关闭 demo mode 并配置有效的 DeepSeek API key。",
+                "\n\n当前 public demo 使用一次 live run 冻结的稳定样例：Structured Plan 是 Kyoto 5-day fixture，评分样例为 92/100，Trace 来自同一次真实链路。",
+                "\n如需重新体验真实模型输出，请配置 WAYFINDER_OWNER_TOKEN 和有效 DeepSeek API key，然后在前端输入 Owner token。",
                 "\n\n",
                 "[DONE]"
         );

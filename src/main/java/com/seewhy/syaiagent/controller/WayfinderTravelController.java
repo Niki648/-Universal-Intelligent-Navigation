@@ -13,6 +13,8 @@ import com.seewhy.syaiagent.model.TravelReport;
 import com.seewhy.syaiagent.service.SseEmitterStreamService;
 import com.seewhy.syaiagent.service.TravelRagService;
 import com.seewhy.syaiagent.service.WayfinderDemoService;
+import com.seewhy.syaiagent.security.OwnerAccessService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -32,15 +34,18 @@ public class WayfinderTravelController {
     private final SseEmitterStreamService sseEmitterStreamService;
     private final TravelRagService travelRagService;
     private final WayfinderDemoService wayfinderDemoService;
+    private final OwnerAccessService ownerAccessService;
 
     public WayfinderTravelController(WayfinderTravelFacade wayfinderTravelFacade,
                                      SseEmitterStreamService sseEmitterStreamService,
                                      TravelRagService travelRagService,
-                                     WayfinderDemoService wayfinderDemoService) {
+                                     WayfinderDemoService wayfinderDemoService,
+                                     OwnerAccessService ownerAccessService) {
         this.wayfinderTravelFacade = wayfinderTravelFacade;
         this.sseEmitterStreamService = sseEmitterStreamService;
         this.travelRagService = travelRagService;
         this.wayfinderDemoService = wayfinderDemoService;
+        this.ownerAccessService = ownerAccessService;
     }
 
     /**
@@ -58,10 +63,11 @@ public class WayfinderTravelController {
      */
     @GetMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> streamChat(@RequestParam String message,
-                                   @RequestParam(required = false) String chatId) {
+                                   @RequestParam(required = false) String chatId,
+                                   HttpServletRequest httpRequest) {
         validateMessage(message);
         String id = normalizeChatId(chatId);
-        if (wayfinderDemoService.isEnabled()) {
+        if (isPublicDemoRequest(httpRequest)) {
             return wayfinderDemoService.demoChatStream(message, id)
                     .doOnCancel(() -> log.info("Demo SSE stream cancelled for {}", id));
         }
@@ -116,9 +122,10 @@ public class WayfinderTravelController {
      * 结构化旅行规划
      */
     @PostMapping("/plan")
-    public TravelPlan generatePlan(@Valid @RequestBody TravelPlanRequest request) {
+    public TravelPlan generatePlan(@Valid @RequestBody TravelPlanRequest request,
+                                   HttpServletRequest httpRequest) {
         String chatId = normalizeChatId(request.chatId());
-        if (wayfinderDemoService.isEnabled()) {
+        if (isPublicDemoRequest(httpRequest)) {
             return wayfinderDemoService.demoTravelPlan();
         }
         return wayfinderTravelFacade.doStructuredPlan(request.message(), chatId);
@@ -135,11 +142,12 @@ public class WayfinderTravelController {
     }
 
     @PostMapping("/rag/explain")
-    public RagExplainResponse explainRag(@RequestBody RagExplainRequest request) {
+    public RagExplainResponse explainRag(@RequestBody RagExplainRequest request,
+                                         HttpServletRequest httpRequest) {
         String chatId = normalizeChatId(request == null ? null : request.chatId());
         String message = request == null ? null : request.message();
         validateMessage(message);
-        if (wayfinderDemoService.isEnabled()) {
+        if (isPublicDemoRequest(httpRequest)) {
             return wayfinderDemoService.demoRagExplain(message, chatId);
         }
         return travelRagService.explainRag(message, chatId);
@@ -186,6 +194,10 @@ public class WayfinderTravelController {
         if (message == null || message.isBlank()) {
             throw new IllegalArgumentException("message 不能为空");
         }
+    }
+
+    private boolean isPublicDemoRequest(HttpServletRequest request) {
+        return wayfinderDemoService.isEnabled() && !ownerAccessService.hasOwnerAccess(request);
     }
 
 }

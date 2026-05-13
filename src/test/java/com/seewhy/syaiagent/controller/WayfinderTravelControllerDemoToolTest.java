@@ -16,6 +16,7 @@ import com.seewhy.syaiagent.service.TravelRagService;
 import com.seewhy.syaiagent.service.WayfinderDemoService;
 import com.seewhy.syaiagent.service.WayfinderDoctorRunner;
 import com.seewhy.syaiagent.service.WayfinderFixedCommandRunner;
+import com.seewhy.syaiagent.security.OwnerAccessService;
 import com.seewhy.syaiagent.trace.AgentTraceService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -291,7 +292,8 @@ class WayfinderTravelControllerDemoToolTest {
                 facade,
                 mock(SseEmitterStreamService.class),
                 mock(TravelRagService.class),
-                demoService
+                demoService,
+                new OwnerAccessService("")
         );
         TravelCapabilityController capabilityController = new TravelCapabilityController(capabilityStatusService);
         SyManusController syManusController = new SyManusController(
@@ -301,7 +303,8 @@ class WayfinderTravelControllerDemoToolTest {
                 demoService,
                 demoToolService,
                 new SyManusArtifactLinkService(artifactService),
-                objectMapper
+                objectMapper,
+                new OwnerAccessService("")
         );
         ArtifactController artifactController = new ArtifactController(artifactDeliveryService);
         TravelTraceController traceController = new TravelTraceController(mock(AgentTraceService.class), demoService);

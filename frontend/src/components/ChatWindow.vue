@@ -125,7 +125,7 @@ export default {
       const url = `${base}${this.ssePath}?${params.toString()}`
 
       this.closeStream()
-      this.es = new EventSource(url)
+      this.es = new EventSource(url, { withCredentials: true })
       this.es.onmessage = (event) => {
         if (!event.data || event.data === '[DONE]' || event.data === '__DONE__') {
           this.finishStream()

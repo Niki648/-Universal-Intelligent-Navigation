@@ -9,6 +9,8 @@ import com.seewhy.syaiagent.model.DemoToolResponse;
 import com.seewhy.syaiagent.service.SyManusArtifactLinkService;
 import com.seewhy.syaiagent.service.SyManusDemoToolService;
 import com.seewhy.syaiagent.service.WayfinderDemoService;
+import com.seewhy.syaiagent.security.OwnerAccessService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
@@ -40,6 +42,7 @@ public class SyManusController {
     private final SyManusDemoToolService syManusDemoToolService;
     private final SyManusArtifactLinkService syManusArtifactLinkService;
     private final ObjectMapper objectMapper;
+    private final OwnerAccessService ownerAccessService;
 
     public SyManusController(ToolCallback[] allTools,
                              @Qualifier("openAiChatModel") ChatModel chatModel,
@@ -47,7 +50,8 @@ public class SyManusController {
                              WayfinderDemoService wayfinderDemoService,
                              SyManusDemoToolService syManusDemoToolService,
                              SyManusArtifactLinkService syManusArtifactLinkService,
-                             ObjectMapper objectMapper) {
+                             ObjectMapper objectMapper,
+                             OwnerAccessService ownerAccessService) {
         this.allTools = allTools;
         this.chatModel = chatModel;
         this.manusChatMemory = manusChatMemory;
@@ -55,6 +59,7 @@ public class SyManusController {
         this.syManusDemoToolService = syManusDemoToolService;
         this.syManusArtifactLinkService = syManusArtifactLinkService;
         this.objectMapper = objectMapper;
+        this.ownerAccessService = ownerAccessService;
     }
 
     /**
@@ -62,10 +67,11 @@ public class SyManusController {
      */
     @GetMapping("/chat")
     public SseEmitter doChatWithManus(@RequestParam String message,
-                                      @RequestParam(required = false) String chatId) {
+                                      @RequestParam(required = false) String chatId,
+                                      HttpServletRequest httpRequest) {
         validateMessage(message);
         String id = normalizeChatId(chatId);
-        if (wayfinderDemoService.isEnabled()) {
+        if (wayfinderDemoService.isEnabled() && !ownerAccessService.hasOwnerAccess(httpRequest)) {
             return demoManusBoundaryEmitter(message, true);
         }
         if (chatModel == null || allTools == null || allTools.length == 0) {

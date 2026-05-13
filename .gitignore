@@ -18,8 +18,10 @@ coverage/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+!**/src/main/**/build/
+!**/src/test/**/build/
 
-### STS ###
+### Java / Spring tool noise ###
 .apt_generated
 .classpath
 .factorypath
@@ -28,49 +30,50 @@ coverage/
 .springBeans
 .sts4-cache
 
-### IntelliJ IDEA ###
-.idea
+### IDEs ###
+.idea/
+.vscode/
 *.iws
 *.iml
 *.ipr
-
-### NetBeans ###
 /nbproject/private/
 /nbbuild/
 /dist/
 /nbdist/
 /.nb-gradle/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
-### VS Code ###
-.vscode/
-
-### 本地敏感配置（勿提交） ###
+### Local sensitive config - do not commit ###
 **/application-local.yml
 **/application-local.yaml
+**/application-*.local.yml
+**/application-*.local.yaml
 .env
 .env.*
 !.env.example
 .env.local
 .env.*.local
-*.pem
-*.key
-*.p12
-*.jks
-*.keystore
 .envrc
 secrets/
+*.pem
+*.key
 *.p8
 *.crt
+*.p12
+*.pfx
+*.jks
+*.keystore
 
-### 前端 ###
+### Frontend ###
 node_modules/
 **/node_modules/
 frontend/node_modules/
 frontend/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-### 运行时与生成文件（勿提交） ###
+### Runtime and generated files - do not commit ###
 data/
 tmp/
 temp/
@@ -78,6 +81,9 @@ temp/
 logs/
 *.tmp
 *.bak
+*.pid
+*.kryo
+*.ser
 *.sqlite
 *.sqlite3
 *.db
@@ -92,5 +98,5 @@ docs/screenshots/
 .DS_Store
 Thumbs.db
 
-# Local private notes and demo artifacts
+### Local private notes and demo artifacts ###
 private-docs/

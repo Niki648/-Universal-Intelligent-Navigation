@@ -93,7 +93,7 @@
 </template>
 
 <script>
-import axios from '../api'
+import axios, { hasOwnerToken } from '../api'
 import ChatWindow from '../components/ChatWindow.vue'
 import PageShell from '../components/common/PageShell.vue'
 import ArtifactSideList from '../components/manus/ArtifactSideList.vue'
@@ -171,6 +171,7 @@ export default {
       executionSteps: cloneSteps(),
       isStreaming: false,
       recentArtifacts: [],
+      ownerEnabled: hasOwnerToken(),
       demoStatus: { ...DEFAULT_DEMO_STATUS },
       stableDemoExamples: [
         {
@@ -230,7 +231,7 @@ export default {
   },
   computed: {
     isPublicDemoMode() {
-      return this.demoStatus.demoMode
+      return this.demoStatus.demoMode && !this.ownerEnabled
     },
     liveTaskHeading() {
       return this.isPublicDemoMode ? 'Live Tool Task Examples' : 'Live Tool Tasks'
@@ -267,8 +268,16 @@ export default {
   mounted() {
     this.restoreSession()
     this.fetchDemoStatus()
+    window.addEventListener('wayfinder-owner-token-changed', this.refreshOwnerState)
+  },
+  beforeUnmount() {
+    window.removeEventListener('wayfinder-owner-token-changed', this.refreshOwnerState)
   },
   methods: {
+    refreshOwnerState() {
+      this.ownerEnabled = hasOwnerToken()
+      this.fetchDemoStatus()
+    },
     async fetchDemoStatus() {
       try {
         const { data } = await axios.get('/travel/demo-status')
@@ -292,6 +301,19 @@ export default {
       if (this.isStreaming) return
       this.currentTask = example.label
       this.taskMode = MODE_PUBLIC
+      if (!this.ownerEnabled) {
+        this.taskStatus = 'Owner Required'
+        this.$refs.toolChat?.appendLocalExchange(
+          example.prompt,
+          'This public demo does not run backend tools or generate/download artifacts. Enter the Owner token in the top bar to run fixed local demo tools on your server.'
+        )
+        this.markStep('task', 'Selected', 'completed')
+        this.markStep('tool', 'Owner token required', 'skipped')
+        this.markStep('run', 'Not started', 'skipped')
+        this.markStep('result', 'Protected', 'skipped')
+        this.saveSession()
+        return
+      }
       this.taskStatus = 'Running'
       this.isStreaming = true
       this.recentArtifacts = []

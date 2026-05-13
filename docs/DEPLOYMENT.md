@@ -1,77 +1,162 @@
 # Wayfinder Guild Deployment Guide
 
-This guide keeps the public portfolio deployment small and cost-controlled.
+This deployment keeps the public site cheap and safe: visitors can view the demo and portfolio, while live model/API/MCP/tool/artifact features require an Owner Token.
 
-## Recommended Public Runtime
+## Build
+
+Backend:
+
+```bash
+mvn clean package
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm ci
+npm run build
+```
+
+Copy `frontend/dist/` to the Nginx web root, for example `/var/www/wayfinder/current`.
+
+## Production Environment
+
+Public demo default:
 
 ```env
 SPRING_PROFILES_ACTIVE=prod
 SERVER_PORT=8123
 WAYFINDER_DEMO_ENABLED=true
-TRAVEL_RAG_MODE=demo
+WAYFINDER_OWNER_TOKEN=replace-with-a-long-random-secret
 WAYFINDER_CORS_ALLOWED_ORIGIN_PATTERNS=https://your-domain.example
+TRAVEL_RAG_MODE=demo
+SEARCH_PROVIDER=disabled
+TAVILY_API_KEY=
+PEXELS_API_KEY=
+DEEPSEEK_API_KEY=
 SPRINGDOC_API_DOCS_ENABLED=false
 SPRINGDOC_SWAGGER_UI_ENABLED=false
 KNIFE4J_ENABLE=false
 LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_AI=INFO
 LOGGING_LEVEL_COM_SEEWHY_SYAIAGENT=INFO
-SEARCH_PROVIDER=disabled
 ```
 
-With this setup:
-
-- PgVector is not required.
-- No cloud vector database is required.
-- RAG Library shows Demo Mode instead of an error.
-- Live model and database cost stay under owner control.
-- `DEEPSEEK_API_KEY` can be omitted for a static public demo, but live chat endpoints require a real key or should be hidden/disabled at the proxy/UI layer.
-- Swagger/Knife4j are closed unless explicitly enabled for a controlled demo.
-- CORS only allows the configured frontend origin; same-origin deployments can keep this narrow.
-
-## Lightweight RAG Runtime
+Owner Live Mode needs the same `WAYFINDER_OWNER_TOKEN` plus the specific providers you want to use:
 
 ```env
-WAYFINDER_DEMO_ENABLED=false
+DEEPSEEK_API_KEY=...
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_CHAT_MODEL=deepseek-chat
+SEARCH_PROVIDER=tavily
+TAVILY_API_KEY=...
+PEXELS_API_KEY=...
 TRAVEL_RAG_MODE=lightweight
 ```
 
-This mode searches bundled Markdown documents from `src/main/resources/document/*.md`. It is suitable for a public site that should show real source snippets without paying for PgVector.
+Use `TRAVEL_RAG_MODE=pgvector` only when PostgreSQL/PgVector is configured. Keep MCP disabled unless you are running a controlled Owner demo.
 
-## Owner Live PgVector Runtime
+If `WAYFINDER_OWNER_TOKEN` is empty, protected live endpoints remain forbidden in production.
 
-Use only for local deep demos or controlled Owner Live Mode:
+## Run Spring Boot
 
-```env
-WAYFINDER_DEMO_ENABLED=false
-TRAVEL_RAG_MODE=pgvector
-DEEPSEEK_API_KEY=...
-DB_URL=jdbc:postgresql://127.0.0.1:5432/sy_ai_agent
-DB_USERNAME=sy_ai_agent
-DB_PASSWORD=...
-SPRINGDOC_API_DOCS_ENABLED=true
-SPRINGDOC_SWAGGER_UI_ENABLED=true
-KNIFE4J_ENABLE=true
+Manual start:
+
+```bash
+java -jar /opt/wayfinder/wayfinder-guild.jar
 ```
 
-If PgVector is unavailable, `/api/travel/rag` and `/api/travel/rag/explain` degrade to lightweight retrieval and log a warning instead of failing the request with a 500.
+Example `/etc/systemd/system/wayfinder.service`:
 
-## MCP and Tool Exposure
+```ini
+[Unit]
+Description=Wayfinder Guild Spring Boot API
+After=network.target
 
-Keep MCP disabled for the public portfolio unless you are running an Owner Live demo. When enabling MCP:
+[Service]
+User=wayfinder
+WorkingDirectory=/opt/wayfinder
+EnvironmentFile=/etc/wayfinder/wayfinder.env
+ExecStart=/usr/bin/java -jar /opt/wayfinder/wayfinder-guild.jar
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
 
-- Start `sy-image-search-mcp` with `MCP_SPRING_PROFILES_ACTIVE=sse` or `stdio` as needed.
-- Set `PEXELS_API_KEY` only in the server environment or local `application-local.yml`.
-- Set `AMAP_MAPS_API_KEY` before launching any AMap MCP child process.
-- Do not expose terminal/file/download tools without authentication, rate limiting, and audit logs.
+[Install]
+WantedBy=multi-user.target
+```
 
-## Topology
+Commands:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable wayfinder
+sudo systemctl start wayfinder
+sudo systemctl status wayfinder
+```
+
+## Nginx
+
+Serve Vite static files and proxy `/api` to the private backend listener:
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.example;
+
+    root /var/www/wayfinder/current;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8123/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection "";
+        proxy_buffering off;
+        proxy_read_timeout 300s;
+    }
+}
+```
+
+Put TLS in front with Certbot or your hosting provider. Do not expose port `8123` publicly; bind firewall access to `127.0.0.1`/local server only.
+
+## Rollback
+
+Keep releases versioned:
 
 ```text
-Visitor
-  -> HTTPS / Nginx
-     -> static frontend
-     -> /api reverse proxy to 127.0.0.1:8123/api
-  -> Spring Boot JAR
+/opt/wayfinder/releases/2026-05-13-001/wayfinder-guild.jar
+/var/www/wayfinder/releases/2026-05-13-001/dist
 ```
 
-Redis is not required for v0.1.0. Keep it deferred until rate limiting, trace cache, session sharing, or multi-instance deployment becomes necessary.
+Rollback steps:
+
+```bash
+sudo ln -sfn /var/www/wayfinder/releases/previous/dist /var/www/wayfinder/current
+sudo cp /opt/wayfinder/releases/previous/wayfinder-guild.jar /opt/wayfinder/wayfinder-guild.jar
+sudo systemctl restart wayfinder
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Verify:
+
+```bash
+curl -f https://your-domain.example/api/health
+curl -f https://your-domain.example/api/travel/demo-status
+```
+
+## Public vs Owner
+
+Public visitors can access portfolio/RPG metadata, health checks, demo status, demo TravelPlan, demo chat stream, demo RAG explain, and static frontend assets.
+
+Public visitors cannot trigger live model calls, MCP, Tavily/Pexels/search, SyManus live tool loops, demo-tool server tasks, or artifact preview/download.
+
+Owner access is enabled by setting `WAYFINDER_OWNER_TOKEN` on the server and entering the same token in the frontend top bar. The token is stored only in the browser session/cookie, not in source code.

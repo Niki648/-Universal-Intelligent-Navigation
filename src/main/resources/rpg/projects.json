@@ -11,7 +11,7 @@
       "TravelPlan 结构化输出带 fallback，避免模型解析失败拖垮接口可用性。",
       "RAG 支持 demo / lightweight / pgvector 三种模式，兼顾本地演示和扩展。",
       "Skills 通过 SKILL.md 动态加载，减少旅行规则硬编码。",
-      "Agent Trace、Eval Harness 和 Rust CLI 组成发布前质量门禁。"
+      "Agent Trace、Eval Harness 和质量检查组成发布前质量门禁。"
     ],
     "moduleIds": [
       "agentic-travel-backend",

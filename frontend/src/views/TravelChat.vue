@@ -83,7 +83,7 @@
 </template>
 
 <script>
-import api from '../api'
+import api, { hasOwnerToken } from '../api'
 import ChatWindow from '../components/ChatWindow.vue'
 import PageShell from '../components/common/PageShell.vue'
 import StateBlock from '../components/common/StateBlock.vue'
@@ -115,6 +115,7 @@ export default {
       scoreLoading: false,
       scoreError: '',
       scoreResult: null,
+      ownerEnabled: hasOwnerToken(),
       demoStatus: { ...DEFAULT_DEMO_STATUS }
     }
   },
@@ -135,13 +136,13 @@ export default {
         : 'Structured plan is generating; chat replies may be slower.'
     },
     planLoadingMessage() {
-      if (this.demoStatus.demoMode) {
+      if (this.demoStatus.demoMode && !this.ownerEnabled) {
         return 'Demo mode is returning the frozen TravelPlan fixture and its matching trace.'
       }
       return 'The structured TravelPlan can take 30-90 seconds when the live model is composing itinerary, budget, risks, and loaded Skills.'
     },
     traceLinkLabel() {
-      if (this.demoStatus.demoMode) return 'View demo voyage trace'
+      if (this.demoStatus.demoMode && !this.ownerEnabled) return 'View demo voyage trace'
       if (this.demoStatus.liveManusAvailable) return 'View this live Agent trace'
       return 'View trace fixture'
     }
@@ -149,11 +150,17 @@ export default {
   mounted() {
     this.restorePlanSession()
     this.fetchDemoStatus()
+    window.addEventListener('wayfinder-owner-token-changed', this.refreshOwnerState)
   },
   beforeUnmount() {
     this.stopPlanSessionPolling()
+    window.removeEventListener('wayfinder-owner-token-changed', this.refreshOwnerState)
   },
   methods: {
+    refreshOwnerState() {
+      this.ownerEnabled = hasOwnerToken()
+      this.fetchDemoStatus()
+    },
     async fetchDemoStatus() {
       try {
         const { data } = await api.get('/travel/demo-status')

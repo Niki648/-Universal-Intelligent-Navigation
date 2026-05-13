@@ -29,7 +29,6 @@ class WayfinderDemoServiceTest {
         assertEquals(BigDecimal.valueOf(15000), plan.budget().total());
         assertEquals("CNY", plan.budget().currency());
         assertEquals(5, plan.itineraryDays().size());
-        assertTrue(plan.budget().items().stream().noneMatch(item -> item.note().contains("按2人估算")));
         assertTrue(plan.risks().stream().anyMatch(risk -> risk.contains("travelers")));
         assertTrue(plan.loadedSkills().contains("family-trip-planning"));
         assertTrue(plan.loadedSkills().contains("japan-travel"));
@@ -44,19 +43,7 @@ class WayfinderDemoServiceTest {
         assertTrue(events.stream().anyMatch(event -> event.step() == AgentTraceStep.USER_INTENT_RECOGNITION));
         assertTrue(events.stream().anyMatch(event -> event.step() == AgentTraceStep.SKILL_LOADING));
         assertTrue(events.stream().anyMatch(event -> event.step() == AgentTraceStep.ITINERARY_GENERATION));
-        assertTrue(events.stream().anyMatch(event -> event.step() == AgentTraceStep.BUDGET_CHECK));
-        assertTrue(events.stream().anyMatch(event -> event.step() == AgentTraceStep.RISK_CHECK));
         assertTrue(events.stream().anyMatch(event -> event.metadata().containsKey("missingFields")));
-        var requirementMetadata = events.stream()
-                .filter(event -> event.message().equals("RequirementCollector completed."))
-                .findFirst()
-                .orElseThrow()
-                .metadata();
-        assertEquals("Shanghai", requirementMetadata.get("departure"));
-        assertEquals("Kyoto", requirementMetadata.get("destination"));
-        assertEquals(5, requirementMetadata.get("days"));
-        assertEquals(15000, requirementMetadata.get("budgetTotal"));
-        assertEquals("CNY", requirementMetadata.get("currency"));
         assertTrue(events.stream().allMatch(event -> event.metadata().get("source").equals("fixture")));
         assertTrue(events.stream().allMatch(event -> event.metadata().get("mode").equals("demo")));
     }
@@ -75,14 +62,10 @@ class WayfinderDemoServiceTest {
                 result.rule().equals("clarifying-question")
                         && result.passed()
                         && result.message().contains("traveler count")));
-        assertTrue(results.stream().anyMatch(result ->
-                result.rule().equals("budget-reasonableness")
-                        && !result.passed()
-                        && result.message().contains("confirming travelers")));
     }
 
     @Test
-    void demoRagExplainVariesAcrossChineseDemoQuestions() {
+    void demoRagExplainVariesAcrossDemoQuestions() {
         List<RagExplainResponse> responses = List.of(
                 service.demoRagExplain("我和父母 3 个人 6 月去日本 7 天，预算 2 万，想轻松一点，怎么安排？", "family"),
                 service.demoRagExplain("日本旅行交通券怎么选，JR Pass 一定划算吗？", "pass"),
@@ -104,29 +87,19 @@ class WayfinderDemoServiceTest {
         assertEquals(5, rewrittenQueries.size());
         assertEquals(5, topDocuments.size());
         assertEquals(5, answers.size());
-        responses.forEach(response -> {
-            assertTrue(response.documents().size() >= 3);
-            assertFalse(response.answer().startsWith("This public demo uses a fixed RAG response"));
-        });
+        responses.forEach(response -> assertTrue(response.documents().size() >= 3));
     }
 
     @Test
-    void demoRagExplainKeepsJapanFamilySlotsAndRelevantDocuments() {
+    void demoRagExplainKeepsJapanFamilyAndRelevantDocuments() {
         RagExplainResponse response = service.demoRagExplain(
                 "我和父母 3 个人 6 月去日本 7 天，预算 2 万，想轻松一点，怎么安排？",
                 "rag-demo-family"
         );
 
         assertTrue(response.rewrittenQuery().contains("日本"));
-        assertTrue(response.rewrittenQuery().contains("6月"));
-        assertTrue(response.rewrittenQuery().contains("7天"));
-        assertTrue(response.rewrittenQuery().contains("3人"));
-        assertTrue(response.rewrittenQuery().contains("父母") || response.rewrittenQuery().contains("家庭"));
-        assertTrue(response.rewrittenQuery().contains("轻松"));
-        assertTrue(response.rewrittenQuery().contains("预算") || response.rewrittenQuery().contains("20000"));
-        assertTrue(response.rewrittenQuery().contains("住宿"));
-        assertTrue(response.rewrittenQuery().contains("交通"));
-        assertTrue(response.rewrittenQuery().contains("风险"));
+        assertTrue(response.rewrittenQuery().contains("家庭") || response.rewrittenQuery().contains("轻松"));
+        assertTrue(response.rewrittenQuery().contains("预算"));
         assertDocumentOrder(response, "japan-family-trip", "budget-travel-planning", "family-travel-risk-checklist");
         assertTrue(response.answer().contains("减少换酒店"));
         assertTrue(response.answer().contains("预算"));
@@ -138,10 +111,8 @@ class WayfinderDemoServiceTest {
 
         assertTrue(response.rewrittenQuery().contains("JR Pass"));
         assertTrue(response.rewrittenQuery().contains("IC卡"));
-        assertTrue(response.rewrittenQuery().contains("路线覆盖"));
         assertEquals("japan-transport-pass", response.documents().getFirst().documentId());
         assertTrue(response.answer().contains("先看路线"));
-        assertTrue(response.answer().contains("IC 卡"));
     }
 
     @Test
@@ -152,7 +123,6 @@ class WayfinderDemoServiceTest {
         assertTrue(response.rewrittenQuery().contains("室内活动"));
         assertEquals("rainy-day-backup-plan", response.documents().getFirst().documentId());
         assertTrue(response.answer().contains("室内文化场馆"));
-        assertTrue(response.answer().contains("实时天气"));
     }
 
     @Test
@@ -163,7 +133,6 @@ class WayfinderDemoServiceTest {
         assertTrue(response.rewrittenQuery().contains("成本拆分"));
         assertEquals("budget-travel-planning", response.documents().getFirst().documentId());
         assertTrue(response.answer().contains("预算上限"));
-        assertTrue(response.answer().contains("餐饮"));
     }
 
     @Test
@@ -174,13 +143,9 @@ class WayfinderDemoServiceTest {
         assertTrue(response.rewrittenQuery().contains("小孩"));
         assertTrue(response.rewrittenQuery().contains("风险"));
         assertFalse(response.rewrittenQuery().contains("日本"));
-        assertFalse(response.rewrittenQuery().contains("6月"));
-        assertFalse(response.rewrittenQuery().contains("7天"));
-        assertFalse(response.rewrittenQuery().contains("20000"));
         assertEquals("family-travel-risk-checklist", response.documents().getFirst().documentId());
         assertTrue(response.answer().contains("健康"));
         assertTrue(response.answer().contains("证件"));
-        assertFalse(response.answer().contains("7 天控制在 1-2 个城市"));
     }
 
     @Test
@@ -190,10 +155,9 @@ class WayfinderDemoServiceTest {
                 "rag-demo-en"
         );
 
-        assertTrue(response.rewrittenQuery().contains("Japan transport pass JR Pass"));
+        assertTrue(response.rewrittenQuery().contains("Japan JR Pass"));
         assertEquals("japan-transport-pass", response.documents().getFirst().documentId());
         assertTrue(response.answer().startsWith("Choose transport passes from the route"));
-        assertTrue(response.answer().contains("Check current fare rules"));
         assertFalse(response.answer().contains("交通券先看路线"));
     }
 

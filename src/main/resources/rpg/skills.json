@@ -13,7 +13,7 @@
     "name": "Spring AI Agent Design",
     "category": "Agent",
     "level": "advanced",
-    "description": "基于 Spring AI 构建对话、结构化输出、工具调用和可观察 Agent 流程。",
+    "description": "基于 Spring AI 构建对话、结构化输出、工具调用和可观测 Agent 流程。",
     "areaId": "travel-cabin",
     "keywords": ["Spring AI", "DeepSeek", "ChatClient", "Tool Calling"]
   },

@@ -96,6 +96,39 @@ textarea {
   background: #ffe8a3;
 }
 
+.owner-token-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 260px;
+}
+
+.owner-token-form input {
+  width: 120px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 231, 174, 0.28);
+  border-radius: 8px;
+  color: #eef5ff;
+  background: rgba(8, 14, 34, 0.72);
+}
+
+.owner-token-form button {
+  height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  color: #191736;
+  background: #ffd36e;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.owner-token-form .owner-clear-button {
+  color: #dbe7ff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
 main {
   width: min(1180px, calc(100vw - 28px));
   margin: 0 auto;
@@ -2147,6 +2180,15 @@ main {
 
   .topbar nav {
     justify-content: flex-start;
+  }
+
+  .owner-token-form {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .owner-token-form input {
+    flex: 1;
   }
 
   .map-shell,

@@ -70,6 +70,8 @@ logging:
 wayfinder:
   demo:
     enabled: ${WAYFINDER_DEMO_ENABLED:true}
+  security:
+    owner-token: ${WAYFINDER_OWNER_TOKEN:}
   cors:
     allowed-origin-patterns: ${WAYFINDER_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:5173}
 
