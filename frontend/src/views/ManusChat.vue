@@ -12,53 +12,17 @@
           </p>
         </div>
 
-        <div class="tool-prompt-board" aria-label="SyManus demo tasks">
-          <section class="prompt-group stable-demo">
-            <div class="prompt-group-head">
-              <strong>Stable Engineering Demos</strong>
-              <span>Local and repeatable</span>
-            </div>
-            <p class="prompt-copy">
-              Fixed backend tasks for project quality checks, targeted tests, runtime verification, portfolio artifacts, and a Wayfinder trace card.
-            </p>
-            <div class="demo-card-grid">
-              <button
-                v-for="example in stableDemoExamples"
-                :key="example.label"
-                class="demo-tool-button"
-                type="button"
-                :disabled="isStreaming"
-                @click="startExample(example)"
-              >
-                <strong>{{ example.label }}</strong>
-                <small>{{ example.description }}</small>
-              </button>
-            </div>
-          </section>
-
-          <section class="prompt-group live">
-            <div class="prompt-group-head">
-              <strong>{{ liveTaskHeading }}</strong>
-              <span>{{ liveTaskSubheading }}</span>
-            </div>
-            <p class="prompt-copy">
-              {{ liveTaskCopy }}
-            </p>
-            <div class="demo-card-grid">
-              <button
-                v-for="example in liveTaskExamples"
-                :key="example.label"
-                class="demo-tool-button live-example-button"
-                type="button"
-                :disabled="isStreaming"
-                @click="fillLiveTask(example)"
-              >
-                <strong>{{ example.label }}</strong>
-                <small>{{ liveExampleDescription(example) }}</small>
-              </button>
-            </div>
-          </section>
-        </div>
+        <ManusDemoPromptBoard
+          :stable-demo-examples="stableDemoExamples"
+          :live-task-examples="liveTaskExamples"
+          :is-streaming="isStreaming"
+          :public-demo-mode="isPublicDemoMode"
+          :live-task-heading="liveTaskHeading"
+          :live-task-subheading="liveTaskSubheading"
+          :live-task-copy="liveTaskCopy"
+          @stable-demo="startExample"
+          @live-task="fillLiveTask"
+        />
 
         <ChatWindow
           ref="toolChat"
@@ -99,24 +63,7 @@
           </dl>
         </div>
 
-        <div class="capability-panel artifact-panel">
-          <p class="area-kicker">Latest Files</p>
-          <div v-if="recentArtifacts.length" class="artifact-side-list">
-            <div
-              v-for="artifact in recentArtifacts"
-              :key="artifact.artifactId"
-              class="artifact-side-card"
-            >
-              <strong>{{ artifact.fileName }}</strong>
-              <span>{{ artifact.mimeType }}</span>
-              <span>{{ formatBytes(artifact.size) }}</span>
-              <span>Expires {{ formatDate(artifact.expiresAt) }}</span>
-            </div>
-          </div>
-          <p v-else class="boundary-note">
-            Portfolio Brief Pack, Trace Card Image, and successful live file tasks appear here with expiring preview/download links.
-          </p>
-        </div>
+        <ArtifactSideList :artifacts="recentArtifacts" />
 
         <div class="trace-panel">
           <div class="timeline-head">
@@ -149,6 +96,9 @@
 import axios from '../api'
 import ChatWindow from '../components/ChatWindow.vue'
 import PageShell from '../components/common/PageShell.vue'
+import ArtifactSideList from '../components/manus/ArtifactSideList.vue'
+import ManusDemoPromptBoard from '../components/manus/ManusDemoPromptBoard.vue'
+import { artifactsFromResult, renderDemoResult } from '../utils/manusDemoRenderer'
 
 const STORAGE_KEY = 'wayfinder.tool.session'
 
@@ -212,7 +162,7 @@ function cloneSteps() {
 
 export default {
   name: 'ManusChat',
-  components: { ChatWindow, PageShell },
+  components: { ChatWindow, PageShell, ArtifactSideList, ManusDemoPromptBoard },
   data() {
     return {
       currentTask: '',
@@ -338,10 +288,6 @@ export default {
       this.$refs.toolChat?.fillInput(example.prompt)
       this.saveSession()
     },
-    liveExampleDescription(example) {
-      if (this.isPublicDemoMode) return `Fill example prompt: ${example.description}`
-      return example.description
-    },
     async runStableDemo(example) {
       if (this.isStreaming) return
       this.currentTask = example.label
@@ -357,12 +303,12 @@ export default {
 
       try {
         const { data } = await axios.post('/travel/manus/demo-tool', { type: example.demoType }, { timeout: 180000 })
-        const rendered = this.renderDemoResult(data)
+        const rendered = renderDemoResult(data, { baseUrl: axios.defaults.baseURL })
         this.$refs.toolChat?.appendLocalExchange(example.prompt, rendered.text, rendered.html)
-        this.artifactsFromResult(data).forEach((artifact) => this.addArtifact(artifact))
+        artifactsFromResult(data).forEach((artifact) => this.addArtifact(artifact))
         this.taskStatus = data?.status === 'error' ? 'Failed' : 'Completed'
         this.markStep('run', this.taskStatus === 'Failed' ? 'Failed' : 'Completed', this.taskStatus === 'Failed' ? 'failed' : 'completed')
-        this.markStep('result', this.artifactsFromResult(data).length ? 'Files Ready' : this.taskStatus, this.taskStatus === 'Failed' ? 'failed' : 'completed')
+        this.markStep('result', artifactsFromResult(data).length ? 'Files Ready' : this.taskStatus, this.taskStatus === 'Failed' ? 'failed' : 'completed')
       } catch (error) {
         const message = error?.response?.data?.message || error?.message || 'The backend demo endpoint is unavailable.'
         this.$refs.toolChat?.appendLocalExchange(example.prompt, `Demo failed: ${message}`)
@@ -373,143 +319,6 @@ export default {
         this.isStreaming = false
         this.saveSession()
       }
-    },
-    renderDemoResult(result) {
-      if (this.isTerminalDemo(result?.type)) {
-        return this.renderTerminalResult(result)
-      }
-
-      const artifacts = this.artifactsFromResult(result)
-      if (!artifacts.length) {
-        return { text: result?.message || 'Demo completed.', html: '' }
-      }
-
-      const escapedMessage = this.escapeHtml(result.message || `${artifacts.length} generated files are ready.`)
-      const cards = artifacts.map((artifact) => {
-        const previewUrl = this.escapeHtml(this.absoluteUrl(artifact.previewUrl))
-        const downloadUrl = this.escapeHtml(this.absoluteUrl(artifact.downloadUrl))
-        const fileName = this.escapeHtml(artifact.fileName)
-        const mimeType = this.escapeHtml(artifact.mimeType || '')
-        const expires = this.escapeHtml(this.formatDate(artifact.expiresAt))
-        return `
-        <div class="artifact-result">
-          <strong>${this.artifactTitle(artifact)}</strong>
-          ${artifact.mimeType?.startsWith('image/') ? `<img src="${previewUrl}" alt="${fileName}" />` : ''}
-          <div class="artifact-meta">
-            <span>${fileName}</span>
-            <span>${mimeType}</span>
-            <span>${this.formatBytes(artifact.size)}</span>
-            <span>Expires ${expires}</span>
-          </div>
-          <div class="artifact-actions">
-            <a href="${previewUrl}" target="_blank" rel="noreferrer">Preview</a>
-            <a href="${downloadUrl}" download="${fileName}" target="_blank" rel="noreferrer">Download</a>
-          </div>
-        </div>
-        `
-      }).join('')
-      const html = `<p>${escapedMessage}</p>${cards}`
-      return {
-        text: `${artifacts.map((artifact) => artifact.fileName).join(', ')} generated by backend tool. Preview/download links are available.`,
-        html
-      }
-    },
-    renderTerminalResult(result) {
-      const title = this.terminalTitle(result?.type)
-      const message = result?.message || 'Command completed.'
-      const summaryItems = this.summaryItemsFromResult(result)
-      const statusClass = result?.status === 'error' ? 'error' : 'success'
-      const cards = summaryItems.map((item) => {
-        const state = this.summaryState(item.state)
-        return `
-          <article class="terminal-summary-card ${state}">
-            <span>${this.escapeHtml(item.label || 'Summary')}</span>
-            <strong>${this.escapeHtml(item.value || '')}</strong>
-            ${item.detail ? `<small>${this.escapeHtml(item.detail)}</small>` : ''}
-          </article>
-        `
-      }).join('')
-      const rawOutput = this.escapeHtml(result?.terminalOutput || '')
-      const raw = rawOutput
-        ? `<details class="raw-output-panel"><summary>Raw output</summary><pre>${rawOutput}</pre></details>`
-        : ''
-      return {
-        text: `${title}: ${message}\n${summaryItems.map((item) => `${item.label}: ${item.value}`).join('\n')}`,
-        html: `
-          <div class="terminal-demo-result">
-            <div class="terminal-demo-head">
-              <span class="terminal-status ${statusClass}">${this.escapeHtml(result?.status || 'success')}</span>
-              <div>
-                <strong>${this.escapeHtml(title)}</strong>
-                <small>${this.escapeHtml(message)}</small>
-              </div>
-            </div>
-            <div class="terminal-summary-grid">${cards}</div>
-            ${raw}
-          </div>
-        `
-      }
-    },
-    summaryItemsFromResult(result) {
-      if (Array.isArray(result?.summaryItems) && result.summaryItems.length) {
-        return result.summaryItems.filter(Boolean)
-      }
-      return [{
-        label: 'Result',
-        value: result?.status === 'error' ? 'Needs attention' : 'Completed',
-        detail: result?.message || '',
-        state: result?.status === 'error' ? 'error' : 'success'
-      }]
-    },
-    terminalTitle(type) {
-      const labels = {
-        doctor: 'Wayfinder Doctor',
-        terminal: 'Wayfinder Doctor',
-        'backend-tests': 'Backend Targeted Tests',
-        'java-runtime': 'Java Runtime Check',
-        'maven-version': 'Maven Version Check'
-      }
-      return labels[type] || 'Engineering Command'
-    },
-    summaryState(value) {
-      return ['success', 'warning', 'error', 'info'].includes(value) ? value : 'info'
-    },
-    isTerminalDemo(type) {
-      return ['doctor', 'terminal', 'backend-tests', 'java-runtime', 'maven-version'].includes(type)
-    },
-    artifactTitle(artifact) {
-      if (artifact?.mimeType?.startsWith('image/')) return 'Generated Image'
-      if (artifact?.mimeType === 'application/pdf') return 'Generated PDF'
-      return 'Generated Text Artifact'
-    },
-    artifactsFromResult(result) {
-      if (Array.isArray(result?.artifacts) && result.artifacts.length) {
-        return result.artifacts.filter(Boolean)
-      }
-      return result?.artifact ? [result.artifact] : []
-    },
-    absoluteUrl(path) {
-      if (!path) return ''
-      if (/^https?:\/\//.test(path)) return path
-      const base = (axios.defaults.baseURL || '').replace(/\/+$/, '')
-      const joined = `${base}${path}`.replace(/([^:]\/)\/+/g, '$1')
-      return new URL(joined, window.location.origin).href
-    },
-    escapeHtml(value) {
-      return String(value || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-    },
-    formatBytes(size) {
-      const value = Number(size || 0)
-      if (value < 1024) return `${value} B`
-      if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`
-      return `${(value / 1024 / 1024).toFixed(1)} MB`
-    },
-    formatDate(value) {
-      return value ? new Date(value).toLocaleString() : 'soon'
     },
     toolLocalResponder(text) {
       const language = this.preferredLanguage(text)

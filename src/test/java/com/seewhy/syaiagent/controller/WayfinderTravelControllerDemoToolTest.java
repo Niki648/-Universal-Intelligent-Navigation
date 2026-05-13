@@ -274,22 +274,36 @@ class WayfinderTravelControllerDemoToolTest {
                 new StubDoctorRunner(),
                 new StubCommandRunner()
         );
+        WayfinderDemoService demoService = new WayfinderDemoService(demoEnabled);
+        ArtifactDeliveryService artifactDeliveryService = new ArtifactDeliveryService(artifactService);
+        CapabilityStatusService capabilityStatusService = new CapabilityStatusService(
+                demoService,
+                new ToolCallback[0],
+                mock(ChatModel.class),
+                "demo-disabled",
+                "disabled",
+                "",
+                ""
+        );
         WayfinderTravelController controller = new WayfinderTravelController(
                 facade,
+                mock(SseEmitterStreamService.class),
+                mock(TravelRagService.class),
+                demoService
+        );
+        TravelCapabilityController capabilityController = new TravelCapabilityController(capabilityStatusService);
+        SyManusController syManusController = new SyManusController(
                 new ToolCallback[0],
                 mock(ChatModel.class),
                 mock(ChatMemory.class),
-                mock(SseEmitterStreamService.class),
-                mock(AgentTraceService.class),
-                mock(TravelRagService.class),
-                new WayfinderDemoService(demoEnabled),
-                new CapabilityStatusService(new WayfinderDemoService(demoEnabled), new ToolCallback[0], mock(ChatModel.class), "demo-disabled", "disabled", "", ""),
-                new ArtifactDeliveryService(artifactService),
+                demoService,
                 demoToolService,
                 new SyManusArtifactLinkService(artifactService),
                 objectMapper
         );
-        return MockMvcBuilders.standaloneSetup(controller).build();
+        ArtifactController artifactController = new ArtifactController(artifactDeliveryService);
+        TravelTraceController traceController = new TravelTraceController(mock(AgentTraceService.class), demoService);
+        return MockMvcBuilders.standaloneSetup(controller, capabilityController, syManusController, artifactController, traceController).build();
     }
 
     private static class StubDoctorRunner extends WayfinderDoctorRunner {

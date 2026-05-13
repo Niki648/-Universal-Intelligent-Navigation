@@ -1,12 +1,8 @@
 package com.seewhy.syaiagent.controller;
 
-import com.seewhy.syaiagent.agent.SyManus;
 import com.seewhy.syaiagent.app.WayfinderTravelFacade;
 import com.seewhy.syaiagent.model.ChatRequest;
 import com.seewhy.syaiagent.model.ChatResponse;
-import com.seewhy.syaiagent.model.DemoToolRequest;
-import com.seewhy.syaiagent.model.DemoToolResponse;
-import com.seewhy.syaiagent.model.DemoArtifactResponse;
 import com.seewhy.syaiagent.model.HealthResponse;
 import com.seewhy.syaiagent.model.QuickRequest;
 import com.seewhy.syaiagent.model.RagExplainRequest;
@@ -14,38 +10,18 @@ import com.seewhy.syaiagent.model.RagExplainResponse;
 import com.seewhy.syaiagent.model.TravelPlan;
 import com.seewhy.syaiagent.model.TravelPlanRequest;
 import com.seewhy.syaiagent.model.TravelReport;
-import com.seewhy.syaiagent.model.WayfinderDemoStatusResponse;
-import com.seewhy.syaiagent.service.ArtifactDeliveryService;
-import com.seewhy.syaiagent.service.CapabilityStatusService;
 import com.seewhy.syaiagent.service.SseEmitterStreamService;
-import com.seewhy.syaiagent.service.SyManusArtifactLinkService;
-import com.seewhy.syaiagent.service.SyManusDemoToolService;
 import com.seewhy.syaiagent.service.TravelRagService;
 import com.seewhy.syaiagent.service.WayfinderDemoService;
-import com.seewhy.syaiagent.trace.AgentTraceEvent;
-import com.seewhy.syaiagent.trace.AgentTraceService;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.tool.ToolCallback;
 import reactor.core.publisher.Flux;
 
-import org.springframework.http.HttpStatus;
-import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/travel")
@@ -53,50 +29,18 @@ import java.util.concurrent.CompletableFuture;
 public class WayfinderTravelController {
 
     private final WayfinderTravelFacade wayfinderTravelFacade;
-
-    private final ToolCallback[] allTools;
-
-    private final ChatModel chatModel;
-
-    private final ChatMemory manusChatMemory;
-
     private final SseEmitterStreamService sseEmitterStreamService;
-
-    private final AgentTraceService agentTraceService;
     private final TravelRagService travelRagService;
     private final WayfinderDemoService wayfinderDemoService;
-    private final CapabilityStatusService capabilityStatusService;
-    private final ArtifactDeliveryService artifactDeliveryService;
-    private final SyManusDemoToolService syManusDemoToolService;
-    private final SyManusArtifactLinkService syManusArtifactLinkService;
-    private final ObjectMapper objectMapper;
 
     public WayfinderTravelController(WayfinderTravelFacade wayfinderTravelFacade,
-                                     ToolCallback[] allTools,
-                                     @Qualifier("openAiChatModel") ChatModel chatModel,
-                                     @Qualifier("manusChatMemory") ChatMemory manusChatMemory,
                                      SseEmitterStreamService sseEmitterStreamService,
-                                     AgentTraceService agentTraceService,
                                      TravelRagService travelRagService,
-                                     WayfinderDemoService wayfinderDemoService,
-                                     CapabilityStatusService capabilityStatusService,
-                                     ArtifactDeliveryService artifactDeliveryService,
-                                     SyManusDemoToolService syManusDemoToolService,
-                                     SyManusArtifactLinkService syManusArtifactLinkService,
-                                     ObjectMapper objectMapper) {
+                                     WayfinderDemoService wayfinderDemoService) {
         this.wayfinderTravelFacade = wayfinderTravelFacade;
-        this.allTools = allTools;
-        this.chatModel = chatModel;
-        this.manusChatMemory = manusChatMemory;
         this.sseEmitterStreamService = sseEmitterStreamService;
-        this.agentTraceService = agentTraceService;
         this.travelRagService = travelRagService;
         this.wayfinderDemoService = wayfinderDemoService;
-        this.capabilityStatusService = capabilityStatusService;
-        this.artifactDeliveryService = artifactDeliveryService;
-        this.syManusDemoToolService = syManusDemoToolService;
-        this.syManusArtifactLinkService = syManusArtifactLinkService;
-        this.objectMapper = objectMapper;
     }
 
     /**
@@ -107,11 +51,6 @@ public class WayfinderTravelController {
         String chatId = normalizeChatId(request.getChatId());
         String response = wayfinderTravelFacade.doChat(request.getMessage(), chatId);
         return new ChatResponse(chatId, response);
-    }
-
-    @GetMapping("/demo-status")
-    public WayfinderDemoStatusResponse demoStatus() {
-        return capabilityStatusService.currentStatus();
     }
 
     /**
@@ -162,81 +101,6 @@ public class WayfinderTravelController {
     public SseEmitter doChatSseEmitter(@RequestParam String message, @RequestParam(required = false) String chatId) {
         validateMessage(message);
         return createChatEmitter(message, chatId, "chat/sse_emitter");
-    }
-
-    /**
-     * 调用 Manus 智能体（流式）。支持 chatId 多轮对话：同一 chatId 会带上近期历史，便于解析「他/她」等指代。
-     */
-    @GetMapping("/manus/chat")
-    public SseEmitter doChatWithManus(@RequestParam String message,
-                                      @RequestParam(required = false) String chatId) {
-        validateMessage(message);
-        String id = normalizeChatId(chatId);
-        if (wayfinderDemoService.isEnabled()) {
-            return demoManusBoundaryEmitter(message, true);
-        }
-        if (chatModel == null || allTools == null || allTools.length == 0) {
-            return demoManusBoundaryEmitter(message, false);
-        }
-        SyManus agent = new SyManus(allTools, chatModel, syManusArtifactLinkService);
-        agent.setConversationChatId(id);
-        agent.setConversationChatMemory(manusChatMemory);
-        agent.setArtifactMarkerFormatter(this::formatManusArtifactMarker);
-        return agent.runStream(message);
-    }
-
-    private SseEmitter demoManusBoundaryEmitter(String message, boolean publicDemoMode) {
-        SseEmitter emitter = new SseEmitter(30_000L);
-        CompletableFuture.runAsync(() -> {
-            try {
-                emitter.send(liveToolBoundaryMessage(message, publicDemoMode));
-                emitter.send("__DONE__");
-                emitter.complete();
-            } catch (IOException e) {
-                log.debug("Could not send SyManus live boundary message: {}", e.getMessage());
-                emitter.complete();
-            }
-        });
-        return emitter;
-    }
-
-    private String liveToolBoundaryMessage(String message, boolean publicDemoMode) {
-        StringBuilder text = new StringBuilder();
-        if (publicDemoMode) {
-            text.append("Current public demo mode keeps Live Tool Tasks behind a configuration boundary. ");
-        } else {
-            text.append("Live Tool Tasks are not configured in this backend session. ");
-        }
-        text.append("They use the real SyManus ReAct loop and need a configured model/API key and any required external services. ");
-        text.append("Use Stable Engineering Demos above for local, repeatable project checks and artifacts.");
-        if (looksLikeImageTask(message)) {
-            text.append("\n\nImage search depends on Pexels API key and external network; unavailable in this demo environment.");
-        }
-        return text.toString();
-    }
-
-    private boolean looksLikeImageTask(String message) {
-        String value = String.valueOf(message).toLowerCase();
-        return value.contains("image") || value.contains("photo") || value.contains("picture")
-                || value.contains("pexels") || value.contains("\u56fe\u7247") || value.contains("\u7167\u7247");
-    }
-
-    @PostMapping("/manus/demo-tool")
-    public DemoToolResponse runManusDemoTool(@RequestBody DemoToolRequest request) {
-        if (request == null || request.type() == null || request.type().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Demo tool type is required.");
-        }
-        return syManusDemoToolService.runDemo(request.type());
-    }
-
-    @GetMapping("/manus/artifacts/{artifactId}")
-    public ResponseEntity<Resource> previewManusArtifact(@PathVariable String artifactId) {
-        return artifactResponse(artifactId, false);
-    }
-
-    @GetMapping("/manus/artifacts/{artifactId}/download")
-    public ResponseEntity<Resource> downloadManusArtifact(@PathVariable String artifactId) {
-        return artifactResponse(artifactId, true);
     }
 
     /**
@@ -305,25 +169,6 @@ public class WayfinderTravelController {
         return new HealthResponse("ok", "Wayfinder Travel Agent is healthy");
     }
 
-    @GetMapping("/trace/{chatId}")
-    public List<AgentTraceEvent> getTraceEvents(@PathVariable String chatId) {
-        if (wayfinderDemoService.isEnabled()) {
-            List<AgentTraceEvent> events = agentTraceService.getEvents(chatId);
-            return events.isEmpty() ? wayfinderDemoService.demoTrace(chatId) : events;
-        }
-        return agentTraceService.getEvents(chatId);
-    }
-
-    @GetMapping(value = "/trace/{chatId}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<AgentTraceEvent>> streamTraceEvents(@PathVariable String chatId) {
-        return agentTraceService.stream(chatId)
-                .map(event -> ServerSentEvent.<AgentTraceEvent>builder()
-                        .event(event.step().name())
-                        .id(event.traceId())
-                        .data(event)
-                        .build());
-    }
-
     private String generateChatId() {
         return "travel-" + UUID.randomUUID().toString().substring(0, 8);
     }
@@ -335,19 +180,6 @@ public class WayfinderTravelController {
     private SseEmitter createChatEmitter(String message, String chatId, String logName) {
         String id = normalizeChatId(chatId);
         return sseEmitterStreamService.stream(id, logName, wayfinderTravelFacade.doChatByStream(message, id));
-    }
-
-    private ResponseEntity<Resource> artifactResponse(String artifactId, boolean attachment) {
-        return artifactDeliveryService.deliver(artifactId, attachment);
-    }
-
-    private String formatManusArtifactMarker(DemoArtifactResponse artifact) {
-        try {
-            return "[ARTIFACT]" + objectMapper.writeValueAsString(artifact) + "[/ARTIFACT]";
-        } catch (JsonProcessingException e) {
-            log.debug("Could not serialize artifact marker for {}: {}", artifact.fileName(), e.getMessage());
-            return "";
-        }
     }
 
     private void validateMessage(String message) {
