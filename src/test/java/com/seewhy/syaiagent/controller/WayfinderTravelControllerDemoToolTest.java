@@ -137,6 +137,7 @@ class WayfinderTravelControllerDemoToolTest {
         demoMockMvc.perform(get("/travel/demo-status"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.demoMode").value(true))
+                .andExpect(jsonPath("$.ragMode").value("demo"))
                 .andExpect(jsonPath("$.liveManusAvailable").value(false))
                 .andExpect(jsonPath("$.searchAvailable").value(false))
                 .andExpect(jsonPath("$.imageSearchAvailable").value(false));
@@ -283,7 +284,8 @@ class WayfinderTravelControllerDemoToolTest {
                 "demo-disabled",
                 "disabled",
                 "",
-                ""
+                "",
+                "demo"
         );
         WayfinderTravelController controller = new WayfinderTravelController(
                 facade,

@@ -58,7 +58,7 @@ public class WayfinderDemoService {
                 "\n\n我会先抽取 destination、departure、days、budget 和 travel style；当前请求缺少 travelers，所以预算会保留人数假设与风险提示。",
                 "\n已加载 Skills：family-trip-planning、japan-travel、relaxed-travel、budget-travel。",
                 "\n随后进入 requirement -> RAG -> tool/plan -> guardrail -> trace 链路，生成可渲染的 TravelPlan。",
-                "\n\n当前 demo mode 使用一次 live run 冻结的稳定样例：Structured Plan 为 Kyoto 5-day fixture，当前评分样例为 88/100，Trace 来自同一次真实链路。",
+                "\n\n当前 demo mode 使用一次 live run 冻结的稳定样例：Structured Plan 为 Kyoto 5-day fixture，当前评分样例为 92/100，Trace 来自同一次真实链路。",
                 "\n如需重新体验真实模型输出，可以关闭 demo mode 并配置有效的 DeepSeek API key。",
                 "\n\n",
                 "[DONE]"

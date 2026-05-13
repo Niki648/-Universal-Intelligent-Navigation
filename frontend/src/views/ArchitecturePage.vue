@@ -95,9 +95,10 @@
         </div>
 
         <div class="runtime-grid">
-          <article v-for="mode in runtimeModes" :key="mode.title" class="runtime-card" :class="mode.type">
-            <span>{{ mode.meta }}</span>
+          <article v-for="mode in runtimeModes" :key="mode.title" class="runtime-card" :class="[mode.type, mode.state]">
+            <span class="runtime-meta">{{ mode.meta }}</span>
             <strong>{{ mode.title }}</strong>
+            <span class="runtime-status">{{ mode.status }}</span>
             <p>{{ mode.description }}</p>
             <TagList :items="mode.tags" />
           </article>
@@ -108,6 +109,7 @@
 </template>
 
 <script>
+import api from '../api'
 import PageShell from '../components/common/PageShell.vue'
 import TagList from '../components/common/TagList.vue'
 
@@ -116,6 +118,10 @@ export default {
   components: { PageShell, TagList },
   data() {
     return {
+      demoStatus: {
+        demoMode: true,
+        ragMode: 'demo'
+      },
       requestChain: [
         {
           step: '01',
@@ -260,29 +266,77 @@ export default {
           description: 'Build and demo paths are checked before the project is shown.'
         }
       ],
-      runtimeModes: [
+      runtimeModeCards: [
         {
           title: 'Public Demo Mode',
           meta: 'Stable showcase',
           type: 'demo',
-          description: 'Uses fixed fixtures and predictable traces so interviewers can review the flow without live cost.',
+          currentStatus: 'Current Mode',
+          standbyStatus: 'Fallback stable fixture',
+          currentDescription: 'Uses fixed fixtures and predictable traces so interviewers can review the flow without live cost.',
+          standbyDescription: 'Remains available as the stable fixture path when live providers are being used.',
           tags: ['fixtures', 'stable UI', 'no quota risk']
         },
         {
           title: 'Owner Live Mode',
           meta: 'Real capability',
           type: 'live',
-          description: 'Runs real model calls and the SyManus tool loop when provider keys and quota are available.',
+          currentStatus: 'Current Mode',
+          standbyStatus: 'Gated by owner keys',
+          currentDescription: 'Runs real model calls and the SyManus tool loop when provider keys and quota are available.',
+          standbyDescription: 'Provider keys and quota unlock the real model calls and SyManus tool loop.',
           tags: ['API keys', 'provider quota', 'tool loop']
         },
         {
           title: 'RAG Modes',
           meta: 'Retrieval fallback',
           type: 'rag',
-          description: 'Chooses demo, lightweight, or pgvector retrieval and downgrades cleanly when a layer is unavailable.',
+          currentStatus: 'Current',
+          currentDescription: 'Chooses demo, lightweight, or pgvector retrieval and downgrades cleanly when a layer is unavailable.',
           tags: ['demo', 'lightweight', 'pgvector']
         }
       ]
+    }
+  },
+  computed: {
+    normalizedRagMode() {
+      const mode = String(this.demoStatus.ragMode || 'demo').trim().toLowerCase()
+      return ['demo', 'lightweight', 'pgvector'].includes(mode) ? mode : 'demo'
+    },
+    runtimeModes() {
+      const demoCurrent = this.demoStatus.demoMode
+      return this.runtimeModeCards.map((mode) => {
+        if (mode.type === 'rag') {
+          return {
+            ...mode,
+            state: 'current',
+            status: `${mode.currentStatus}: ${this.normalizedRagMode}`,
+            description: mode.currentDescription,
+            tags: [`Current: ${this.normalizedRagMode}`, ...mode.tags.filter((tag) => tag !== this.normalizedRagMode)]
+          }
+        }
+
+        const isCurrent = mode.type === 'demo' ? demoCurrent : !demoCurrent
+        return {
+          ...mode,
+          state: isCurrent ? 'current' : 'standby',
+          status: isCurrent ? mode.currentStatus : mode.standbyStatus,
+          description: isCurrent ? mode.currentDescription : mode.standbyDescription
+        }
+      })
+    }
+  },
+  mounted() {
+    this.fetchDemoStatus()
+  },
+  methods: {
+    async fetchDemoStatus() {
+      try {
+        const { data } = await api.get('/travel/demo-status')
+        this.demoStatus = { ...this.demoStatus, ...data }
+      } catch (error) {
+        console.warn('Failed to load runtime capability status.', error)
+      }
     }
   }
 }

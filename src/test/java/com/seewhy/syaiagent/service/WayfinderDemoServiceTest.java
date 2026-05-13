@@ -29,6 +29,7 @@ class WayfinderDemoServiceTest {
         assertEquals(BigDecimal.valueOf(15000), plan.budget().total());
         assertEquals("CNY", plan.budget().currency());
         assertEquals(5, plan.itineraryDays().size());
+        assertTrue(plan.budget().items().stream().noneMatch(item -> item.note().contains("按2人估算")));
         assertTrue(plan.risks().stream().anyMatch(risk -> risk.contains("travelers")));
         assertTrue(plan.loadedSkills().contains("family-trip-planning"));
         assertTrue(plan.loadedSkills().contains("japan-travel"));
@@ -46,6 +47,16 @@ class WayfinderDemoServiceTest {
         assertTrue(events.stream().anyMatch(event -> event.step() == AgentTraceStep.BUDGET_CHECK));
         assertTrue(events.stream().anyMatch(event -> event.step() == AgentTraceStep.RISK_CHECK));
         assertTrue(events.stream().anyMatch(event -> event.metadata().containsKey("missingFields")));
+        var requirementMetadata = events.stream()
+                .filter(event -> event.message().equals("RequirementCollector completed."))
+                .findFirst()
+                .orElseThrow()
+                .metadata();
+        assertEquals("Shanghai", requirementMetadata.get("departure"));
+        assertEquals("Kyoto", requirementMetadata.get("destination"));
+        assertEquals(5, requirementMetadata.get("days"));
+        assertEquals(15000, requirementMetadata.get("budgetTotal"));
+        assertEquals("CNY", requirementMetadata.get("currency"));
         assertTrue(events.stream().allMatch(event -> event.metadata().get("source").equals("fixture")));
         assertTrue(events.stream().allMatch(event -> event.metadata().get("mode").equals("demo")));
     }
@@ -62,12 +73,12 @@ class WayfinderDemoServiceTest {
                         && result.message().contains("explicit destination")));
         assertTrue(results.stream().anyMatch(result ->
                 result.rule().equals("clarifying-question")
-                        && !result.passed()
+                        && result.passed()
                         && result.message().contains("traveler count")));
         assertTrue(results.stream().anyMatch(result ->
                 result.rule().equals("budget-reasonableness")
                         && !result.passed()
-                        && result.message().contains("traveler-count uncertainty")));
+                        && result.message().contains("confirming travelers")));
     }
 
     @Test
